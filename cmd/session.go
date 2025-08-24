@@ -18,16 +18,20 @@ var sessionCmd = &cobra.Command{
 	Short: "Make session actions",
 	Long: fmt.Sprintf(
 		`Make session actions using this subcommand.
-				For example: %s %s -n. This starts a new session`, CliName, SessionName,
+For example: %s %s -n. This starts a new session`, CliName, SessionName,
 	),
 	Run: func(cmd *cobra.Command, args []string) {
-
+		listFlag, _ := cmd.Flags().GetBool("list")
+		if listFlag {
+			// TODO: return active sessions from sessions manager
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(sessionCmd)
-	sessionCmd.Flags().StringP("new", "n", "", "Create new session.")
+	sessionCmd.Flags().BoolP("new", "n", false, "Create new session.")
 	sessionCmd.Flags().BoolP("list", "l", false, "Get last active sessions.")
 	sessionCmd.Flags().StringP("get", "g", "", "Return to session if exists.")
+	sessionCmd.MarkFlagsMutuallyExclusive("new", "get", "list")
 }
