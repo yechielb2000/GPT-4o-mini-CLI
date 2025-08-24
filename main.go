@@ -15,8 +15,6 @@ simulating commands
 session -n "start new session"
 session --list "get last active sessions"
 session "session name" return to session
-api key -u "newapikey"
-api key (print new key)
 */
 
 func main() {
