@@ -7,6 +7,11 @@ import (
 
 const ApiCmd string = "api"
 
+/*
+apiCmd subcommand handles all api related actions
+api key -s "newkey" - set new api key.
+api key -p - prints current api key.
+*/
 var apiCmd = &cobra.Command{
 	Use:   ApiCmd,
 	Short: "Make api actions",

@@ -20,6 +20,7 @@ var sessionCmd = &cobra.Command{
 		`Make session actions using this subcommand.
 For example: %s %s -n. This starts a new session`, CliName, SessionName,
 	),
+	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		listFlag, _ := cmd.Flags().GetBool("list")
 		if listFlag {
