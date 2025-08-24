@@ -55,5 +55,6 @@ func init() {
 	apiKeyCmd.Flags().StringVar(&apiKey, "new", "", "Set new api key.")
 	apiKeyCmd.MarkFlagsMutuallyExclusive("print", "new")
 	rootCmd.AddCommand(apiCmd)
+	//TODO: see how to use bind
 	apiCmd.Flags().StringVarP(&apiBaseURL, "new", "n", "", "Set new base URL.")
 }
