@@ -20,7 +20,11 @@ var apiCmd = &cobra.Command{
 	Long: `Make api actions.
 For example: set the api key of the gpt-4o-mini`,
 	Run: func(cmd *cobra.Command, args []string) {
-
+		if apiBaseURL == "" {
+			//TODO: validate it better of course..
+			//TODO: log error etc..
+			return
+		}
 	},
 }
 
@@ -51,4 +55,5 @@ func init() {
 	apiKeyCmd.Flags().StringVar(&apiKey, "new", "", "Set new api key.")
 	apiKeyCmd.MarkFlagsMutuallyExclusive("print", "new")
 	rootCmd.AddCommand(apiCmd)
+	apiCmd.Flags().StringVarP(&apiBaseURL, "new", "n", "", "Set new base URL.")
 }

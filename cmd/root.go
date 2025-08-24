@@ -9,7 +9,8 @@ import (
 const CliName string = "gpt4omini"
 
 var (
-	apiKey = viper.GetString("GPT4oMINI_APIKEY")
+	apiKey     = viper.GetString("GPT4oMINI_APIKEY")
+	apiBaseURL = viper.GetString("GPT4oMINI_API_BASE_URL")
 )
 
 // rootCmd represents the base command when called without any subcommands
