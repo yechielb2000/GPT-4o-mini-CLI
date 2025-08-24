@@ -9,8 +9,9 @@ I want to be able to
 - get / update api key
 
 simulating commands
-new session add (session name)
-session (session name)
+session -n "start new session"
+session --list "get last active sessions"
+session "session name" return to session
 api key -u "newapikey"
 api key (print new key)
 */
