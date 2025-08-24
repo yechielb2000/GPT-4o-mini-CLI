@@ -1,6 +1,9 @@
 package main
 
-import "gpt4omini/cmd"
+import (
+	"github.com/spf13/viper"
+	"gpt4omini/cmd"
+)
 
 /*
 I want to be able to
@@ -17,5 +20,7 @@ api key (print new key)
 */
 
 func main() {
+	viper.SetEnvPrefix(cmd.CliName)
+	viper.AutomaticEnv()
 	cmd.Execute()
 }
