@@ -2,10 +2,15 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"os"
 )
 
 const CliName string = "gpt4omini"
+
+var (
+	apiKey = viper.GetString("GPT4oMINI_APIKEY")
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{

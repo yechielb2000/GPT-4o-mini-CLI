@@ -2,15 +2,13 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const ApiCmd string = "api"
+const ApiKeyCmd string = "key"
 
 /*
 apiCmd subcommand handles all api related actions
-api key -s "newkey" - set new api key.
-api key -p - prints current api key.
 */
 var apiCmd = &cobra.Command{
 	Use:   ApiCmd,
@@ -22,18 +20,22 @@ For example: set the api key of the gpt-4o-mini`,
 	},
 }
 
+/*
+apiKeyCmd subcommand handles api key actions such as edit api key or print current key.
+api key -"newkey" | set new api key.
+api key -p | prints current api key.
+*/
+var apiKeyCmd = &cobra.Command{
+	Use:   ApiKeyCmd,
+	Short: "key related actions",
+	Run: func(cmd *cobra.Command, args []string) {
+
+	},
+}
+
 func init() {
+	apiCmd.AddCommand(apiKeyCmd)
+	apiKeyCmd.Flags().BoolP("print", "p", false, "Print current api key.")
+	apiKeyCmd.Flags().StringVar(&apiKey, "new", "", "Set new api key.")
 	rootCmd.AddCommand(apiCmd)
-	apiKeyName := "apikey"
-	viper.SetDefault(apiKeyName, viper.GetString("GPT4oMINI_APIKEY"))
-	// should i assign it to rootCmd ?
-	apiCmd.PersistentFlags().String(apiKeyName, "", "An API key for the sessions")
-	if err := rootCmd.MarkFlagRequired(apiKeyName); err != nil {
-		//TODO: log out error and exit
-		return
-	}
-	if err := viper.BindPFlag(apiKeyName, rootCmd.PersistentFlags().Lookup(apiKeyName)); err != nil {
-		//TODO: log out error and exit
-		return
-	}
 }
