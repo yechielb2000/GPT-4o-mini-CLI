@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-const ApiCmd string = "apiCmd"
+const ApiCmd string = "api"
 
 var apiCmd = &cobra.Command{
 	Use:   ApiCmd,
