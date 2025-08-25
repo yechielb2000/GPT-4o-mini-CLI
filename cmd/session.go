@@ -35,8 +35,8 @@ For example: %s %s -n. This starts a new session`, CliName, SessionName,
 			//TODO: change this to params that can be changed via cli (use config.yaml maybe)
 			u := url.URL{
 				Scheme:   "wss",
-				Host:     "api.openai.com:443",
-				Path:     "/v1/realtime",
+				Host:     "api.openai.com",
+				Path:     "/v1/realtime/sessions",
 				RawQuery: "model=gpt-4o-realtime-preview-2024-12-17",
 			}
 			newSession, err := session.NewSession(u, apiKey)

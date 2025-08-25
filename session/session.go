@@ -2,20 +2,17 @@ package session
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
-	"sync"
 	"time"
 )
-
-const ChatCommands string = `Send and receive message in the terminal.
-To close the conversation you can Ctrl+C or type #>exit.
-To print history of messages type #>history.\n\n`
 
 type Message struct {
 	sender  string
@@ -23,20 +20,27 @@ type Message struct {
 }
 
 type Session struct {
-	sendChannel chan []byte
-	conn        *websocket.Conn
-	wg          sync.WaitGroup
-	done        chan struct{}
+	sendChannel    chan []byte
+	conn           *websocket.Conn
+	done           chan struct{}
+	conversationID string
 }
 
 func NewSession(u url.URL, apiKey string) (*Session, error) {
+	fmt.Println(u.String())
 	headers := http.Header{}
-	//TODO: I need to hold the apiKey in a better place right now ill just read from env
 	headers.Add("Authorization", "Bearer "+apiKey)
+	fmt.Println(apiKey)
+	fmt.Printf("API key length: %d\n", len(apiKey))
 	headers.Add("OpenAI-Beta", "realtime=v1")
-	conn, _, err := websocket.DefaultDialer.Dial(u.String(), headers)
+	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
 	if err != nil {
-		return nil, err
+		if resp != nil {
+			body, _ := io.ReadAll(resp.Body)
+			fmt.Println("HTTP Status:", resp.Status)
+			fmt.Println("Body:", string(body))
+		}
+		log.Fatal(err)
 	}
 	return &Session{
 		sendChannel: make(chan []byte),
@@ -46,18 +50,17 @@ func NewSession(u url.URL, apiKey string) (*Session, error) {
 }
 
 func (s *Session) Start() {
-	s.wg.Add(2)
-	defer s.wg.Wait()
-
 	go s.readData()
 	go s.writeData()
 
-	go func() {
-		reader := bufio.NewScanner(os.Stdin)
-		interrupt := make(chan os.Signal, 1)
-		signal.Notify(interrupt, os.Interrupt)
+	s.sendRequest(`You are a rock & roll biggest fan that can help me learn anything about The Scorpions`)
 
+	reader := bufio.NewScanner(os.Stdin)
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+	go func() {
 		for {
+			//TODO: delete it and make this actions using function calls.
 			fmt.Print("Type: ")
 			if !reader.Scan() {
 				break
@@ -119,11 +122,50 @@ func (s *Session) writeData() {
 }
 
 func (s *Session) handleMessage(message []byte) {
-	// TODO: extract and print the message
-	fmt.Println("message:", string(message))
+	var data map[string]interface{}
+	if err := json.Unmarshal(message, &data); err != nil {
+		log.Println("json parse error:", err)
+		return
+	}
+	if data["type"] == "response.created" {
+		if resp, ok := data["response"].(map[string]interface{}); ok {
+			if id, ok := resp["conversation"].(string); ok {
+				s.conversationID = id
+			}
+		}
+	}
+
+	switch data["type"] {
+	case "response.output_text.delta":
+		if delta, ok := data["delta"].(string); ok {
+			fmt.Print(delta)
+		}
+	case "response.completed":
+		fmt.Print("\n")
+	}
+
 }
 
 func (s *Session) sendRequest(text string) {
-	// TODO: build the request and send it
-	fmt.Println("sending:", text)
+	req := map[string]interface{}{
+		"type": "response.create",
+		"response": map[string]interface{}{
+			"modalities":   []string{"text"},
+			"instructions": text,
+		},
+	}
+	if s.conversationID != "" {
+		req["response"].(map[string]interface{})["conversation"] = s.conversationID
+	}
+
+	data, _ := json.Marshal(req)
+	s.sendChannel <- data
+}
+
+func (s *Session) handleFunctionCalls() {
+	// TODO: maybe we will have an Action / Tool singleton with these options
+}
+
+func LoadSessionConfigParams(data []byte) {
+	// TODO: load from config.yaml the api info and session params
 }
