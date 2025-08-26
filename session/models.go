@@ -21,33 +21,6 @@ type CreateSessionHTTPResponse struct {
 	ClientSecret ClientSecret `json:"client_secret"`
 }
 
-type SessionResponse struct {
-	Type    string `json:"type"`
-	EventId string `json:"event_id"`
-	Session struct {
-		Object                   string        `json:"object"`
-		Id                       string        `json:"id"`
-		Model                    string        `json:"model"`
-		Modalities               []string      `json:"modalities"`
-		Instructions             string        `json:"instructions"`
-		Voice                    string        `json:"voice"`
-		OutputAudioFormat        string        `json:"output_audio_format"`
-		Tools                    []interface{} `json:"tools"`
-		ToolChoice               string        `json:"tool_choice"`
-		Temperature              float64       `json:"temperature"`
-		MaxResponseOutputTokens  string        `json:"max_response_output_tokens"`
-		TurnDetection            []interface{} `json:"turn_detection"`
-		Speed                    float64       `json:"speed"`
-		Tracing                  interface{}   `json:"tracing"`
-		Prompt                   interface{}   `json:"prompt"`
-		ExpiresAt                int           `json:"expires_at"`
-		InputAudioNoiseReduction interface{}   `json:"input_audio_noise_reduction"`
-		InputAudioFormat         string        `json:"input_audio_format"`
-		InputAudioTranscription  interface{}   `json:"input_audio_transcription"`
-		Include                  interface{}   `json:"include"`
-	} `json:"session"`
-}
-
 type MessageResponseConfig struct {
 	Modalities   []string `json:"modalities"`
 	Instructions string   `json:"instructions"`
