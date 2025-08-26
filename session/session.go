@@ -2,16 +2,23 @@ package session
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"gpt4omini/api"
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"time"
+)
+
+var (
+	config = api.GetConfig()
 )
 
 type Message struct {
@@ -23,70 +30,106 @@ type Session struct {
 	sendChannel    chan []byte
 	conn           *websocket.Conn
 	done           chan struct{}
-	conversationID string
+	ConversationID string
+	SessionID      string
+	ClientSecret   ClientSecret
 }
 
-func NewSession(u url.URL, apiKey string) (*Session, error) {
-	fmt.Println(u.String())
-	headers := http.Header{}
-	headers.Add("Authorization", "Bearer "+apiKey)
-	fmt.Println(apiKey)
-	fmt.Printf("API key length: %d\n", len(apiKey))
-	headers.Add("OpenAI-Beta", "realtime=v1")
-	conn, resp, err := websocket.DefaultDialer.Dial(u.String(), headers)
-	if err != nil {
-		if resp != nil {
-			body, _ := io.ReadAll(resp.Body)
-			fmt.Println("HTTP Status:", resp.Status)
-			fmt.Println("Body:", string(body))
-		}
-		log.Fatal(err)
-	}
-	return &Session{
+func NewSession() (*Session, error) {
+	session := &Session{
 		sendChannel: make(chan []byte),
-		conn:        conn,
 		done:        make(chan struct{}),
-	}, nil
+	}
+	createSessionRes, err := createNewSession()
+	if err != nil {
+		return nil, err
+	}
+	session.ClientSecret = createSessionRes.ClientSecret
+	session.SessionID = createSessionRes.Id
+	conn, err := session.createNewSocketConnection()
+	if err != nil {
+		return nil, err
+	}
+	session.conn = conn
+	return session, err
+}
+
+func createNewSession() (*CreateSessionHTTPResponse, error) {
+	bodyBytes, _ := json.Marshal(CreateSessionHTTPRequest{
+		Modalities:   []string{"text"},
+		Model:        config.Model.Name,
+		Instructions: config.Model.Instruction,
+	})
+	u := "https://" + config.Api.Host + api.RealtimeSessionsPath
+	req, _ := http.NewRequest("POST", u, bytes.NewReader(bodyBytes))
+	req.Header.Set("Authorization", "Bearer "+config.Api.Key)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	sessionMetadata := &CreateSessionHTTPResponse{}
+	if res.StatusCode == 200 {
+		data, _ := io.ReadAll(res.Body)
+		err = json.Unmarshal(data, &sessionMetadata)
+	} else {
+		err = errors.New("unexpected status code " + strconv.Itoa(res.StatusCode))
+	}
+	return sessionMetadata, err
+}
+
+func (s *Session) createNewSocketConnection() (*websocket.Conn, error) {
+	headers := http.Header{}
+	headers.Add("Authorization", "Bearer "+s.ClientSecret.Value)
+	headers.Add("OpenAI-Beta", "realtime=v1")
+
+	url := api.GetURL(api.RealtimePath)
+	conn, _, err := websocket.DefaultDialer.Dial(url.String(), headers)
+	return conn, err
 }
 
 func (s *Session) Start() {
+	if s.HasExpired() {
+		log.Println("Session is expired, start a new one.")
+		return
+	}
 	go s.readData()
 	go s.writeData()
-
-	s.sendRequest(`You are a rock & roll biggest fan that can help me learn anything about The Scorpions`)
 
 	reader := bufio.NewScanner(os.Stdin)
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
-	go func() {
-		for {
-			//TODO: delete it and make this actions using function calls.
-			fmt.Print("Type: ")
-			if !reader.Scan() {
-				break
-			}
-			text := reader.Text()
-
-			if text == "#>exit" {
-				log.Println("closing session...")
-				s.Close()
-				return
-			}
-
-			s.sendRequest(text)
-
-			select {
-			case <-s.done:
-				log.Println("connection closed by server")
-				return
-			case <-interrupt:
-				log.Println("interrupt received, closing connection")
-				s.Close()
-				return
-			default:
-			}
+	for {
+		//TODO: delete it and make this actions using function calls.
+		fmt.Print("#>")
+		if !reader.Scan() {
+			break
 		}
-	}()
+		text := reader.Text()
+
+		if text == "#>exit" {
+			log.Println("closing session...")
+			s.Close()
+			return
+		}
+
+		s.sendRequest(text)
+
+		select {
+		case <-s.done:
+			log.Println("connection closed by server")
+			return
+		case <-interrupt:
+			log.Println("interrupt received, closing connection")
+			s.Close()
+			return
+		default:
+		}
+	}
 }
 
 func (s *Session) Close() {
@@ -97,6 +140,11 @@ func (s *Session) Close() {
 	time.Sleep(100 * time.Millisecond)
 	s.conn.Close()
 	close(s.sendChannel)
+}
+
+func (s *Session) HasExpired() bool {
+	expireTime := time.Unix(s.ClientSecret.ExpiresAt, 0)
+	return time.Now().After(expireTime)
 }
 
 func (s *Session) readData() {
@@ -122,40 +170,21 @@ func (s *Session) writeData() {
 }
 
 func (s *Session) handleMessage(message []byte) {
-	var data map[string]interface{}
-	if err := json.Unmarshal(message, &data); err != nil {
-		log.Println("json parse error:", err)
-		return
-	}
-	if data["type"] == "response.created" {
-		if resp, ok := data["response"].(map[string]interface{}); ok {
-			if id, ok := resp["conversation"].(string); ok {
-				s.conversationID = id
-			}
-		}
-	}
-
-	switch data["type"] {
-	case "response.output_text.delta":
-		if delta, ok := data["delta"].(string); ok {
-			fmt.Print(delta)
-		}
-	case "response.completed":
-		fmt.Print("\n")
-	}
-
+	fmt.Println("res:", string(message))
 }
 
 func (s *Session) sendRequest(text string) {
-	req := map[string]interface{}{
-		"type": "response.create",
-		"response": map[string]interface{}{
-			"modalities":   []string{"text"},
-			"instructions": text,
-		},
+	msgResConfig := MessageResponseConfig{
+		Modalities:   []string{"text"},
+		Instructions: text,
 	}
-	if s.conversationID != "" {
-		req["response"].(map[string]interface{})["conversation"] = s.conversationID
+	if s.ConversationID != "" {
+		msgResConfig.Conversation = s.ConversationID
+	}
+
+	req := &MessageRequest{
+		Type:     "response.create",
+		Response: msgResConfig,
 	}
 
 	data, _ := json.Marshal(req)
@@ -164,8 +193,4 @@ func (s *Session) sendRequest(text string) {
 
 func (s *Session) handleFunctionCalls() {
 	// TODO: maybe we will have an Action / Tool singleton with these options
-}
-
-func LoadSessionConfigParams(data []byte) {
-	// TODO: load from config.yaml the api info and session params
 }

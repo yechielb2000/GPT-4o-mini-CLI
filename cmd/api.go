@@ -8,12 +8,12 @@ const ApiCmd string = "api"
 const ApiKeyCmd string = "key"
 
 var (
-	printKey bool
+	printKey   bool
+	apiBaseURL string
+	apiKey     string
 )
 
-/*
-apiCmd subcommand handles all api related actions
-*/
+// apiCmd subcommand handles all api related actions
 var apiCmd = &cobra.Command{
 	Use:   ApiCmd,
 	Short: "Make api actions",
