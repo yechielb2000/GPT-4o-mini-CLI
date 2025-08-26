@@ -32,10 +32,10 @@ For example: %s %s -n. This starts a new session`, CliName, SessionName,
 	Run: func(cmd *cobra.Command, args []string) {
 		if showList {
 			for id := range sessionsManager.Sessions() {
-				fmt.Println("Session ID:", id)
+				fmt.Println("RealtimeSession ID:", id)
 			}
 		} else if startNewSession {
-			newSession, err := session.NewSession()
+			newSession, err := session.NewRealtimeSession()
 			if err != nil {
 				log.Fatal(err)
 			}

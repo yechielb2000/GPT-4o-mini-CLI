@@ -26,19 +26,21 @@ type Message struct {
 	content []byte
 }
 
-type Session struct {
+type RealtimeSession struct {
 	sendChannel    chan []byte
 	conn           *websocket.Conn
 	done           chan struct{}
+	readyForInput  chan struct{}
 	ConversationID string
 	SessionID      string
 	ClientSecret   ClientSecret
 }
 
-func NewSession() (*Session, error) {
-	session := &Session{
-		sendChannel: make(chan []byte),
-		done:        make(chan struct{}),
+func NewRealtimeSession() (*RealtimeSession, error) {
+	session := &RealtimeSession{
+		sendChannel:   make(chan []byte),
+		done:          make(chan struct{}),
+		readyForInput: make(chan struct{}, 1),
 	}
 	createSessionRes, err := createNewSession()
 	if err != nil {
@@ -82,7 +84,7 @@ func createNewSession() (*CreateSessionHTTPResponse, error) {
 	return sessionMetadata, err
 }
 
-func (s *Session) createNewSocketConnection() (*websocket.Conn, error) {
+func (s *RealtimeSession) createNewSocketConnection() (*websocket.Conn, error) {
 	headers := http.Header{}
 	headers.Add("Authorization", "Bearer "+s.ClientSecret.Value)
 	headers.Add("OpenAI-Beta", "realtime=v1")
@@ -92,22 +94,50 @@ func (s *Session) createNewSocketConnection() (*websocket.Conn, error) {
 	return conn, err
 }
 
-func (s *Session) Start() {
+func (s *RealtimeSession) Start() {
 	if s.HasExpired() {
-		log.Println("Session is expired, start a new one.")
+		log.Println("RealtimeSession is expired, start a new one.")
 		return
 	}
 	go s.readData()
 	go s.writeData()
+	go s.handleUserInput()
 
-	reader := bufio.NewScanner(os.Stdin)
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
-	for {
-		//TODO: delete it and make this actions using function calls.
-		fmt.Print("#>")
+	s.readyForInput <- struct{}{}
+	select {
+	case <-s.done:
+		log.Println("connection closed by server")
+	case <-interrupt:
+		log.Println("interrupt received, closing connection")
+		s.Close()
+	}
+}
+
+func (s *RealtimeSession) Close() {
+	_ = s.conn.WriteMessage(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
+	)
+	time.Sleep(100 * time.Millisecond)
+	s.conn.Close()
+	close(s.sendChannel)
+}
+
+func (s *RealtimeSession) HasExpired() bool {
+	expireTime := time.Unix(s.ClientSecret.ExpiresAt, 0)
+	return time.Now().After(expireTime)
+}
+
+func (s *RealtimeSession) handleUserInput() {
+	reader := bufio.NewScanner(os.Stdin)
+	for range s.readyForInput {
+		fmt.Print("#> ")
 		if !reader.Scan() {
-			break
+			log.Println("stdin closed, exiting input loop")
+			s.Close()
+			return
 		}
 		text := reader.Text()
 
@@ -118,36 +148,10 @@ func (s *Session) Start() {
 		}
 
 		s.sendRequest(text)
-
-		select {
-		case <-s.done:
-			log.Println("connection closed by server")
-			return
-		case <-interrupt:
-			log.Println("interrupt received, closing connection")
-			s.Close()
-			return
-		default:
-		}
 	}
 }
 
-func (s *Session) Close() {
-	_ = s.conn.WriteMessage(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
-	)
-	time.Sleep(100 * time.Millisecond)
-	s.conn.Close()
-	close(s.sendChannel)
-}
-
-func (s *Session) HasExpired() bool {
-	expireTime := time.Unix(s.ClientSecret.ExpiresAt, 0)
-	return time.Now().After(expireTime)
-}
-
-func (s *Session) readData() {
+func (s *RealtimeSession) readData() {
 	defer close(s.done)
 
 	for {
@@ -160,7 +164,7 @@ func (s *Session) readData() {
 	}
 }
 
-func (s *Session) writeData() {
+func (s *RealtimeSession) writeData() {
 	for msg := range s.sendChannel {
 		if err := s.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 			log.Println("write error:", err)
@@ -169,11 +173,21 @@ func (s *Session) writeData() {
 	}
 }
 
-func (s *Session) handleMessage(message []byte) {
-	fmt.Println("res:", string(message))
+func (s *RealtimeSession) handleMessage(message []byte) {
+	sessionRes := map[string]any{}
+	if err := json.Unmarshal(message, &sessionRes); err != nil {
+		log.Println("unmarshal error:", err)
+	}
+	switch sessionRes["type"] {
+	case "response.text.delta":
+		fmt.Print(sessionRes["delta"])
+	case "response.done":
+		fmt.Println()
+		s.readyForInput <- struct{}{}
+	}
 }
 
-func (s *Session) sendRequest(text string) {
+func (s *RealtimeSession) sendRequest(text string) {
 	msgResConfig := MessageResponseConfig{
 		Modalities:   []string{"text"},
 		Instructions: text,
@@ -191,6 +205,6 @@ func (s *Session) sendRequest(text string) {
 	s.sendChannel <- data
 }
 
-func (s *Session) handleFunctionCalls() {
+func (s *RealtimeSession) handleFunctionCalls() {
 	// TODO: maybe we will have an Action / Tool singleton with these options
 }

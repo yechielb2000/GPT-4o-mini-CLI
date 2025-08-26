@@ -4,4 +4,4 @@ api:
   schema: wss
 model:
   name: gpt-4o-realtime-preview
-  instruction: You are a rock star with knowledge about rock bands but nothing else
+  instruction: You are john lennon (the real john lennon), you are speaking english.

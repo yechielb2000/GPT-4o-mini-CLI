@@ -12,7 +12,7 @@ var (
 )
 
 type SessionsManager struct {
-	sessions map[string]*Session
+	sessions map[string]*RealtimeSession
 }
 
 func GetSessionsManager() *SessionsManager {
@@ -23,10 +23,10 @@ func GetSessionsManager() *SessionsManager {
 }
 
 func NewSessionsManager() *SessionsManager {
-	return &SessionsManager{make(map[string]*Session)}
+	return &SessionsManager{make(map[string]*RealtimeSession)}
 }
 
-func (sm *SessionsManager) AddSession(session *Session) {
+func (sm *SessionsManager) AddSession(session *RealtimeSession) {
 	// this can probably override existing id
 	sm.sessions[session.SessionID] = session
 }
@@ -39,7 +39,7 @@ func (sm *SessionsManager) RemoveSession(id string) {
 	}
 }
 
-func (sm *SessionsManager) GetSession(id string) (*Session, error) {
+func (sm *SessionsManager) GetSession(id string) (*RealtimeSession, error) {
 	session, ok := sm.sessions[id]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("session %s not found", id))
@@ -50,6 +50,6 @@ func (sm *SessionsManager) GetSession(id string) (*Session, error) {
 	return session, nil
 }
 
-func (sm *SessionsManager) Sessions() map[string]*Session {
+func (sm *SessionsManager) Sessions() map[string]*RealtimeSession {
 	return sm.sessions
 }
