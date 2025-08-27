@@ -30,11 +30,13 @@ type RealtimeSession struct {
 
 func NewRealtimeSession() (*RealtimeSession, error) {
 	session := &RealtimeSession{
+		BaseSession: BaseSession{
+			Type: "realtime",
+		},
 		sendChannel:   make(chan []byte),
 		done:          make(chan struct{}),
 		readyForInput: make(chan struct{}, 1),
 	}
-	session.Type = "realtime"
 
 	if createSessionRes, err := configureModel(); err == nil {
 		session.ID = createSessionRes.Id

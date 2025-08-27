@@ -64,7 +64,7 @@ type Session interface {
 	Close()
 	GetID() string
 	GetType() string
-	HasExpired() bool
+	HasClientSecretExpired() bool
 	GetClientSecretValue() string
 	GetClientSecretExpirationTime() time.Time
 }

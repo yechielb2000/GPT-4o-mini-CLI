@@ -48,7 +48,7 @@ func (sm *SessionsManager) GetSession(id string) (Session, error) {
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("session %s not found", id))
 	}
-	if session.HasExpired() {
+	if session.HasClientSecretExpired() {
 		sm.RemoveSession(id)
 		return nil, errors.New(fmt.Sprintf("session %s has expired", id))
 	}
