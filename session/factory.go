@@ -17,3 +17,11 @@ func NewSessionByType(type_ string) (Session, error) {
 	}
 	return nil, errors.New(fmt.Sprintf("Session type \"%s\" not support", type_))
 }
+
+func GetSessionTypes() []string {
+	types := make([]string, 0)
+	for k := range Factory {
+		types = append(types, k)
+	}
+	return types
+}

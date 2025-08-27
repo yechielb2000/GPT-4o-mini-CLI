@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"gpt4omini/session"
+	"log"
 	"os"
 	"strings"
 )
@@ -16,6 +17,7 @@ var (
 	startNewSession bool
 	sessionId       string
 	sessionsManager = session.GetSessionsManager()
+	reader          = bufio.NewReader(os.Stdin)
 )
 
 var sessionCmd = &cobra.Command{
@@ -23,7 +25,7 @@ var sessionCmd = &cobra.Command{
 	Short: "Make session actions",
 	Long:  "Manage realtime sessions (create, list, resume, delete) in an interactive CLI until you exit.",
 	Run: func(cmd *cobra.Command, args []string) {
-		reader := bufio.NewReader(os.Stdin)
+
 		for {
 			fmt.Print("\n(session-cli) > ")
 			input, _ := reader.ReadString('\n')
@@ -47,6 +49,18 @@ func handleCommand(command string, args []string) {
 		for id, s := range sessionsManager.Sessions() {
 			fmt.Printf("ID: %s | Type: %s\n", id, s.GetType())
 		}
+	case "new":
+		fmt.Println(fmt.Sprintf("Enter session type (%s):", session.GetSessionTypes()))
+		chosenType, _ := reader.ReadString('\n')
+		chosenType = strings.TrimSpace(chosenType)
+		newSession, err := session.NewSessionByType(chosenType)
+		if err != nil {
+			log.Println("Got an error while trying to create session:", err)
+			return
+		}
+		sessionsManager.AddSession(newSession)
+		fmt.Printf("Started new %s session with ID %s\n\n", newSession.GetType(), newSession.GetID())
+		go newSession.Start()
 	case "exit", "quit":
 		fmt.Println("Exiting session manager...")
 		return
