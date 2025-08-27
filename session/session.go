@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-var config = config.GetConfig()
+var cfg = config.GetConfig()
 
 // Session is the common interface for all session types.
 type Session interface {

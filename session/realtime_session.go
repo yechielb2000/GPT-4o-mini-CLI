@@ -51,12 +51,12 @@ func NewRealtimeSession() (*RealtimeSession, error) {
 func configureModel() (*ConfigureModelResponse, error) {
 	bodyBytes, _ := json.Marshal(ConfigureModelRequest{
 		Modalities:   []string{"text"},
-		Model:        config.Model.Name,
-		Instructions: config.Model.Instruction,
+		Model:        cfg.Model.Name,
+		Instructions: cfg.Model.Instruction,
 	})
-	u := "https://" + config.Api.Host + config.RealtimeSessionsPath
+	u := "https://" + cfg.Api.Host + config.RealtimeSessionsPath
 	req, _ := http.NewRequest("POST", u, bytes.NewReader(bodyBytes))
-	req.Header.Set("Authorization", "Bearer "+config.Api.Key)
+	req.Header.Set("Authorization", "Bearer "+cfg.Api.Key)
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}

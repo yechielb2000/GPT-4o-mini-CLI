@@ -1,6 +1,10 @@
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"fmt"
+	"github.com/spf13/cobra"
+	"gpt4omini/config"
+)
 
 const ConfigCmd = "config"
 
@@ -18,6 +22,27 @@ var configCmd = &cobra.Command{
 	Short: "View or update config file",
 	Long: `Manage the configuration stored in config.yaml.
 You can print the current config or update API/model fields.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		cfg := config.GetConfig()
+		if apiKey != "" {
+			cfg.Api.Key = apiKey
+		}
+		if apiHost != "" {
+			cfg.Api.Host = apiHost
+		}
+		if apiSchema != "" {
+			cfg.Api.Schema = apiSchema
+		}
+		if modelName != "" {
+			cfg.Model.Name = modelName
+		}
+		if modelInstr != "" {
+			cfg.Model.Instruction = modelInstr
+		}
+		if printConfig {
+			fmt.Println(cfg)
+		}
+	},
 }
 
 func init() {
