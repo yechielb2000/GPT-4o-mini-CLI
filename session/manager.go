@@ -27,7 +27,11 @@ func NewSessionsManager() *SessionsManager {
 }
 
 func (sm *SessionsManager) AddSession(session Session) {
-	// it probably can override existing id. make sure it won't happen
+	id := session.GetID()
+	if _, exists := sm.sessions[id]; exists {
+		fmt.Printf("Session %s already exists. Skipping.\n", id)
+		return
+	}
 	sm.sessions[session.GetID()] = session
 }
 
