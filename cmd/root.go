@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-const CliName string = "gpt4omini"
+const CliName string = "gptoncli"
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{

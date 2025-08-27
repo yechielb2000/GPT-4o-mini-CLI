@@ -2,17 +2,51 @@
 
 Real-time GPT-4o-mini CLI with Function Calling
 
-install the cli using these commands
+## Installation Time :)
+
+compile and install the cli using these commands:
 
 ```shell
 go build
 go install
+chmod +x gptoncli # you probably won't need it but in case you can't execute, run this.
 ```
 
-set these environment variables before running the cli
+Set a config file called `config.yaml`.
 
 ```shell
-GPT4oMINI_APIKEY=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
-GPT4oMINI_API_BASE_URL=wss://config.openai.com/v1/realtime
+mkdir -p /etc/gptoncli && touch /etc/gptoncli/config.yaml
 ```
 
+Then edit the file like this (change the values to your values)
+
+```yaml
+api:
+  key: your-api-key
+  host: the host (api.openai.com)
+  schema: the schema (wss)
+model:
+  name: the model name (gpt-4.1)
+  instruction: the initial instructions (you are a rock band assistant...)
+```
+
+> _Note_: You can also change the values later using the cli
+
+## Using the `gptoncli`
+
+To see usage of the cli You can run `gptoncli --help`.  
+Let's see how it looks like very quickly.  
+```yaml
+gptoncli:
+    session: subcommand for handling session actions.
+        - new: create new session.
+        - list: list all sessions (sessions dies when we stop using the cli).
+        - "session id": will resume the session with the requested session. 
+    config: subcommand for handling the config file
+        - print: print the current config file
+        - key: update the api key.
+        - host: update the target host.
+        - schema: update the schema type.
+        - model: update the model type.
+        - instruction: update the default initiative instructions for each session.
+```
