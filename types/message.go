@@ -8,7 +8,7 @@ Source: https://github.com/openai/openai-python/blob/main/src/openai/types/conve
 type Message struct {
 
 	// Id The unique ID of the message
-	Id string `json:"id"`
+	Id string `json:"id,omitempty"`
 
 	// Content The content of the message
 	Content []Content `json:"content"`
@@ -23,8 +23,16 @@ type Message struct {
 		Status The status of item.
 		One of `in_progress`, `completed`, or `incomplete`. Populated when items are returned via API.
 	*/
-	Status string `json:"status"`
+	Status string `json:"status,omitempty"`
 
 	// Type The type of the message. Always set to `message`.
 	Type string `json:"type"`
+}
+
+func NewMessage(role string, type_ string, content []Content) *Message {
+	return &Message{
+		Role:    role,
+		Type:    type_,
+		Content: content,
+	}
 }
