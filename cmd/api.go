@@ -10,7 +10,6 @@ const ApiKeyCmd string = "key"
 var (
 	printKey   bool
 	apiBaseURL string
-	apiKey     string
 )
 
 // apiCmd subcommand handles all config related actions
