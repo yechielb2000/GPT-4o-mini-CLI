@@ -40,6 +40,7 @@ You can print the current config or update API/model fields.`,
 			cfg.Model.Instruction = modelInstr
 		}
 		if printConfig {
+			fmt.Println("hello there")
 			fmt.Println(cfg)
 		}
 	},
