@@ -2,6 +2,7 @@ package session
 
 import (
 	"gpt4omini/config"
+	"gpt4omini/types"
 	"time"
 )
 
@@ -18,7 +19,7 @@ type Session interface {
 // BaseSession contains fields shared across all sessions.
 type BaseSession struct {
 	ID           string
-	ClientSecret ClientSecret
+	ClientSecret types.ClientSecret
 	CreatedAt    time.Time
 }
 

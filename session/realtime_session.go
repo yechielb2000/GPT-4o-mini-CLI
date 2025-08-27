@@ -7,7 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"gpt4omini/builders"
 	"gpt4omini/config"
+	"gpt4omini/events"
+	"gpt4omini/types"
 	"io"
 	"log"
 	"net/http"
@@ -48,8 +51,8 @@ func NewRealtimeSession() (*RealtimeSession, error) {
 	return session, err
 }
 
-func configureModel() (*ConfigureModelResponse, error) {
-	bodyBytes, _ := json.Marshal(ConfigureModelRequest{
+func configureModel() (*types.ConfigureModelResponse, error) {
+	bodyBytes, _ := json.Marshal(types.ConfigureModelRequest{
 		Modalities:   []string{"text"},
 		Model:        cfg.Model.Name,
 		Instructions: cfg.Model.Instruction,
@@ -66,7 +69,7 @@ func configureModel() (*ConfigureModelResponse, error) {
 	}
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
-	sessionMetadata := &ConfigureModelResponse{}
+	sessionMetadata := &types.ConfigureModelResponse{}
 	if res.StatusCode == 200 {
 		err = json.Unmarshal(body, &sessionMetadata)
 	} else {
@@ -168,14 +171,14 @@ func (s *RealtimeSession) handleMessage(message []byte) {
 		log.Println("unmarshal error:", err)
 	}
 	switch sessionRes["type"] {
-	case "response.created":
+	case events.ResponseCreated:
 		fmt.Println(sessionRes)
-	case "response.text.delta":
+	case events.ResponseTextDelta:
 		fmt.Print(sessionRes["delta"])
-	case "response.done":
+	case events.ResponseDone:
 		fmt.Println()
 		s.readyForInput <- struct{}{}
-	case "error":
+	case events.Error:
 		fmt.Println(sessionRes["error"])
 	default:
 		fmt.Println(sessionRes["type"])
@@ -183,19 +186,7 @@ func (s *RealtimeSession) handleMessage(message []byte) {
 }
 
 func (s *RealtimeSession) sendMessage(text string) {
-	rawMessage, err := json.Marshal(&Message{
-		Type: "response.create",
-		Response: MessageResponse{
-			Modalities: []string{"text"},
-			Input: []MessageInput{
-				{
-					Type:    "message",
-					Role:    "user",
-					Content: []MessageContent{{Text: text, Type: "input_text"}},
-				},
-			},
-		},
-	})
+	rawMessage, err := json.Marshal(builders.NewClientTextMessage(text))
 
 	g := make(map[string]interface{})
 	_ = json.Unmarshal(rawMessage, &g)

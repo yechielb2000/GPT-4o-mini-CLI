@@ -29,10 +29,7 @@ type Message struct {
 	Type string `json:"type"`
 }
 
-func NewMessage(role string, type_ string, content []Content) *Message {
-	return &Message{
-		Role:    role,
-		Type:    type_,
-		Content: content,
-	}
+type ClientMessage struct {
+	Type     string   `json:"type"`
+	Response Response `json:"response"`
 }

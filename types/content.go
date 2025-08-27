@@ -23,5 +23,6 @@ func (b BaseContent) ContentType() string {
 
 type TextContent struct {
 	BaseContent
+	Type string `json:"type"`
 	Text string `json:"text"`
 }
