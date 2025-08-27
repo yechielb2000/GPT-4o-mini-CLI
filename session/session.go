@@ -44,15 +44,15 @@ func (bs *BaseSession) GetCreationTime() types.ClientSecret {
 func (bs *BaseSession) String() string {
 	out, _ := json.MarshalIndent(struct {
 		ID           string    `json:"id"`
+		Type         string    `json:"type"`
 		ClientSecret string    `json:"client_secret"`
 		CreatedAt    time.Time `json:"created_at"`
-		Type         string    `json:"type"`
 		ExpiresAt    time.Time `json:"expires_at"`
 	}{
 		ID:           bs.GetID(),
+		Type:         bs.GetType(),
 		ClientSecret: bs.GetClientSecretValue(),
 		CreatedAt:    bs.createdAt,
-		Type:         bs.GetType(),
 		ExpiresAt:    bs.GetClientSecretExpirationTime(),
 	}, "", "  ")
 	return string(out)

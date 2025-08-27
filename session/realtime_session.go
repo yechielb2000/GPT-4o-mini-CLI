@@ -35,21 +35,21 @@ func NewRealtimeSession() (*RealtimeSession, error) {
 		readyForInput: make(chan struct{}, 1),
 	}
 	session.Type = "realtime"
-	createSessionRes, err := configureModel()
-	if err != nil {
+
+	if createSessionRes, err := configureModel(); err == nil {
+		session.ID = createSessionRes.Id
+		session.clientSecret = createSessionRes.ClientSecret
+		session.createdAt = time.Now()
+	} else {
 		return nil, err
 	}
 
-	session.ID = createSessionRes.Id
-	session.clientSecret = createSessionRes.ClientSecret
-	session.createdAt = time.Now()
-
-	conn, err := session.establishConnection()
-	if err != nil {
+	if conn, err := session.establishConnection(); err == nil {
+		session.conn = conn
+	} else {
 		return nil, err
 	}
-	session.conn = conn
-	return session, err
+	return session, nil
 }
 
 func configureModel() (*types.ConfigureModelResponse, error) {
