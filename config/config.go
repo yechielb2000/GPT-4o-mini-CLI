@@ -21,6 +21,13 @@ const (
 	RealtimePath         = "/v1/realtime"
 )
 
+func GetConfig() *Config {
+	once.Do(func() {
+		instance = NewApiConfig()
+	})
+	return instance
+}
+
 func NewApiConfig() *Config {
 	config := &Config{}
 	data, err := os.ReadFile(ConfigFilePath)
@@ -42,13 +49,6 @@ func (c *Config) Save() error {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 	return nil
-}
-
-func GetConfig() *Config {
-	once.Do(func() {
-		instance = NewApiConfig()
-	})
-	return instance
 }
 
 // GetURL provides full url.URL object. path is provided manually.
