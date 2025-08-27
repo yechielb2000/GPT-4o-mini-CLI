@@ -74,6 +74,14 @@ func handleCommand(command string, args []string) {
 		}
 		fmt.Printf("Resuming %s session %s\n", s.GetType(), id)
 		go s.Start()
+	case "delete":
+		if len(args) < 2 {
+			fmt.Println("Usage: delete <sessionID>")
+			return
+		}
+		id := args[1]
+		sessionsManager.RemoveSession(id)
+		fmt.Println("Deleted session:", id)
 	case "exit", "quit":
 		fmt.Println("Exiting session manager...")
 		return
