@@ -25,25 +25,33 @@ var configCmd = &cobra.Command{
 You can print the current config or update API/model fields.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := config.GetConfig()
+		updated := false
 		if apiKey != "" {
 			cfg.Api.Key = apiKey
+			updated = true
 		}
 		if apiHost != "" {
 			cfg.Api.Host = apiHost
+			updated = true
 		}
 		if apiSchema != "" {
 			cfg.Api.Schema = apiSchema
+			updated = true
 		}
 		if modelName != "" {
 			cfg.Model.Name = modelName
+			updated = true
 		}
 		if modelInstr != "" {
 			cfg.Model.Instruction = modelInstr
+			updated = true
 		}
 
-		if err := cfg.Save(); err != nil {
-			fmt.Println(err)
-			return
+		if updated {
+			if err := cfg.Save(); err != nil {
+				fmt.Println(err)
+				return
+			}
 		}
 
 		if printConfig {
