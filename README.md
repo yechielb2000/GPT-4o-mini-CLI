@@ -2,6 +2,7 @@
 
 Real-time GPT-4o-mini CLI with Function Calling
 
+# TODO: update this page, it is soooooo outdated now
 ## Installation Time :)
 
 compile and install the cli using these commands:
