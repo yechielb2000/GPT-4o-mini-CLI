@@ -1,0 +1,32 @@
+package sessionv2
+
+import (
+	"gpt4omini/api"
+	"time"
+)
+
+var config = api.GetConfig()
+
+// Session is the common interface for all session types.
+type Session interface {
+	Start()
+	Close()
+	HasExpired() bool
+	GetID() string
+}
+
+// BaseSession contains fields shared across all sessions.
+type BaseSession struct {
+	ID           string
+	ClientSecret ClientSecret
+}
+
+func (bs *BaseSession) GetID() string {
+	return bs.ID
+}
+
+// HasExpired checks if the session secret expired.
+func (bs *BaseSession) HasExpired() bool {
+	expireTime := time.Unix(bs.ClientSecret.ExpiresAt, 0)
+	return time.Now().After(expireTime)
+}
