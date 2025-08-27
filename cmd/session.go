@@ -14,12 +14,6 @@ var (
 	sessionsManager = session.GetSessionsManager()
 )
 
-/*
-sessionCmd subcommand handle all session actions
-session -new "start new session"
-session --list "get last active sessions"
-session "session name" return to session
-*/
 var sessionCmd = &cobra.Command{
 	Use:   SessionName,
 	Short: "Make session actions",
