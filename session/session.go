@@ -20,13 +20,12 @@ import (
 var config = api.GetConfig()
 
 type RealtimeSession struct {
-	sendChannel    chan []byte
-	conn           *websocket.Conn
-	done           chan struct{}
-	readyForInput  chan struct{}
-	SessionID      string
-	ConversationID string
-	ClientSecret   ClientSecret
+	sendChannel   chan []byte
+	conn          *websocket.Conn
+	done          chan struct{}
+	readyForInput chan struct{}
+	SessionID     string
+	ClientSecret  ClientSecret
 }
 
 func NewRealtimeSession() (*RealtimeSession, error) {
@@ -66,13 +65,12 @@ func configureModel() (*ConfigureModelResponse, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
-
+	body, _ := io.ReadAll(res.Body)
 	sessionMetadata := &ConfigureModelResponse{}
 	if res.StatusCode == 200 {
-		data, _ := io.ReadAll(res.Body)
-		err = json.Unmarshal(data, &sessionMetadata)
+		err = json.Unmarshal(body, &sessionMetadata)
 	} else {
-		err = errors.New("unexpected status code " + strconv.Itoa(res.StatusCode))
+		err = errors.New("unexpected status code " + strconv.Itoa(res.StatusCode) + ".\n" + string(body))
 	}
 	return sessionMetadata, err
 }
@@ -176,8 +174,7 @@ func (s *RealtimeSession) handleMessage(message []byte) {
 	}
 	switch sessionRes["type"] {
 	case "response.created":
-		resObj := sessionRes["response"].(map[string]interface{})
-		s.ConversationID = resObj["conversation_id"].(string)
+		fmt.Println(sessionRes)
 	case "response.text.delta":
 		fmt.Print(sessionRes["delta"])
 	case "response.done":
@@ -191,25 +188,19 @@ func (s *RealtimeSession) handleMessage(message []byte) {
 }
 
 func (s *RealtimeSession) sendMessage(text string) {
-	messageInput := []MessageInput{
-		{
-			Type:    "message",
-			Role:    "user",
-			Content: []MessageContent{{Text: text, Type: "input_text"}},
+	rawMessage, err := json.Marshal(&Message{
+		Type: "response.create",
+		Response: MessageResponse{
+			Modalities: []string{"text"},
+			Input: []MessageInput{
+				{
+					Type:    "message",
+					Role:    "user",
+					Content: []MessageContent{{Text: text, Type: "input_text"}},
+				},
+			},
 		},
-	}
-	messageRes := MessageResponse{
-		ConversationID: s.ConversationID,
-		Modalities:     []string{"text"},
-		Input:          messageInput,
-	}
-	message := Message{Type: "response.create", Response: messageRes}
-
-	if s.ConversationID != "" {
-		message.Response.ConversationID = s.ConversationID
-	}
-
-	rawMessage, err := json.Marshal(message)
+	})
 
 	g := make(map[string]interface{})
 	_ = json.Unmarshal(rawMessage, &g)

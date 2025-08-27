@@ -23,9 +23,8 @@ type Message struct {
 }
 
 type MessageResponse struct {
-	ConversationID string         `json:"conversation,omitempty"`
-	Modalities     []string       `json:"modalities"`
-	Input          []MessageInput `json:"input"`
+	Modalities []string       `json:"modalities"`
+	Input      []MessageInput `json:"input"`
 }
 
 type MessageInput struct {
