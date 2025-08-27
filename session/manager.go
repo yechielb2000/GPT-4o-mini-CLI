@@ -12,7 +12,7 @@ var (
 )
 
 type SessionsManager struct {
-	sessions map[string]*RealtimeSession
+	sessions map[string]Session
 }
 
 func GetSessionsManager() *SessionsManager {
@@ -23,12 +23,12 @@ func GetSessionsManager() *SessionsManager {
 }
 
 func NewSessionsManager() *SessionsManager {
-	return &SessionsManager{make(map[string]*RealtimeSession)}
+	return &SessionsManager{make(map[string]Session)}
 }
 
-func (sm *SessionsManager) AddSession(session *RealtimeSession) {
-	// this can probably override existing id
-	sm.sessions[session.SessionID] = session
+func (sm *SessionsManager) AddSession(session Session) {
+	// it probably can override existing id. make sure it won't happen
+	sm.sessions[session.GetID()] = session
 }
 
 func (sm *SessionsManager) RemoveSession(id string) {
@@ -39,17 +39,18 @@ func (sm *SessionsManager) RemoveSession(id string) {
 	}
 }
 
-func (sm *SessionsManager) GetSession(id string) (*RealtimeSession, error) {
+func (sm *SessionsManager) GetSession(id string) (Session, error) {
 	session, ok := sm.sessions[id]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("session %s not found", id))
 	}
 	if session.HasExpired() {
-		return nil, errors.New(fmt.Sprintf("session %s expired", id))
+		sm.RemoveSession(id)
+		return nil, errors.New(fmt.Sprintf("session %s has expired", id))
 	}
 	return session, nil
 }
 
-func (sm *SessionsManager) Sessions() map[string]*RealtimeSession {
+func (sm *SessionsManager) Sessions() map[string]Session {
 	return sm.sessions
 }
