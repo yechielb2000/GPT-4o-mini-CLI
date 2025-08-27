@@ -1,64 +1,104 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/spf13/cobra"
 	"gpt4omini/session"
 	"log"
+	"os"
+	"strings"
 )
 
 const SessionName string = "session"
 
 var (
-	showList        bool
-	startNewSession bool
-	sessionId       string
-	sessionsManager = session.GetSessionsManager()
+	sessionsManager    = session.GetSessionsManager()
+	reader             = bufio.NewReader(os.Stdin)
+	exitFromSessionCLI = make(chan struct{})
 )
 
-/*
-sessionCmd subcommand handle all session actions
-session -new "start new session"
-session --list "get last active sessions"
-session "session name" return to session
-*/
 var sessionCmd = &cobra.Command{
 	Use:   SessionName,
 	Short: "Make session actions",
-	Long: fmt.Sprintf(
-		`Make session actions using this subcommand.
-For example: %s %s -n. This starts a new session`, CliName, SessionName,
-	),
+	Long:  "Manage realtime sessions (create, list, resume, delete) in an interactive CLI until you exit.",
 	Run: func(cmd *cobra.Command, args []string) {
-		if showList {
-			for id := range sessionsManager.Sessions() {
-				fmt.Println("RealtimeSession ID:", id)
-			}
-		} else if startNewSession {
-			newSession, err := session.NewRealtimeSession()
-			if err != nil {
-				log.Fatal(err)
-			}
-			sessionsManager.AddSession(newSession)
-			if err != nil {
-				fmt.Println(err)
+		for {
+			select {
+			case <-exitFromSessionCLI:
 				return
+			default:
+				handleUserInput()
 			}
-			newSession.Start()
-		} else if sessionId != "" {
-			s, err := sessionsManager.GetSession(sessionId)
-			if err != nil {
-				log.Print(err)
-			}
-			s.Start()
 		}
 	},
 }
 
+func handleUserInput() {
+	fmt.Print("\n(session-cli) > ")
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+
+	if input == "" {
+		return
+	}
+
+	args := strings.Split(input, " ")
+	command := args[0]
+
+	handleCommand(command, args[1:])
+}
+
+func handleCommand(command string, args []string) {
+	switch command {
+	case "list":
+		for id, s := range sessionsManager.Sessions() {
+			fmt.Printf("ID: %s | Type: %s\n", id, s.GetType())
+		}
+	case "new":
+		fmt.Println(fmt.Sprintf("Enter session type (%s):", session.GetSessionTypes()))
+		chosenType, _ := reader.ReadString('\n')
+		chosenType = strings.TrimSpace(chosenType)
+		newSession, err := session.NewSessionByType(chosenType)
+		if err != nil {
+			log.Println("Got an error while trying to create session:", err)
+			return
+		}
+		sessionsManager.AddSession(newSession)
+		fmt.Printf("Started new %s session with ID %s\n\n", newSession.GetType(), newSession.GetID())
+		go newSession.Start()
+	case "resume":
+		if len(args) < 1 {
+			fmt.Println("Usage: resume <sessionID>")
+			return
+		}
+		id := args[0]
+		s, err := sessionsManager.GetSession(id)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		fmt.Printf("Resuming %s session %s\n", s.GetType(), id)
+		go s.Start()
+	case "delete":
+		if len(args) < 1 {
+			fmt.Println("Usage: delete <sessionID>")
+			return
+		}
+		id := args[0]
+		if err := sessionsManager.RemoveSession(id); err != nil {
+			log.Println(err)
+		} else {
+			fmt.Println("Deleted session:", id)
+		}
+	case "exit", "quit":
+		fmt.Println("Exiting session manager...")
+		close(exitFromSessionCLI)
+	default:
+		fmt.Println("Unknown command. Available: list, new, resume <id>, delete <id>, exit")
+	}
+}
+
 func init() {
 	rootCmd.AddCommand(sessionCmd)
-	sessionCmd.Flags().BoolVarP(&startNewSession, "new", "n", false, "Create new session.")
-	sessionCmd.Flags().BoolVarP(&showList, "list", "l", false, "Get last active sessions.")
-	sessionCmd.Flags().StringVarP(&sessionId, "get", "g", "", "Return to session if exists.")
-	sessionCmd.MarkFlagsMutuallyExclusive("new", "get", "list")
 }

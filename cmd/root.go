@@ -7,7 +7,6 @@ import (
 
 const CliName string = "gptoncli"
 
-// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   CliName,
 	Short: "Real-time GPT-4o-mini CLI with Function Calling",
@@ -18,8 +17,6 @@ simulating the experience of a real-time conversation. Additionally, the CLI sup
 function calling, for example: implementing a simple function that multiplies two numbers.`,
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {

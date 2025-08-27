@@ -27,16 +27,22 @@ func NewSessionsManager() *SessionsManager {
 }
 
 func (sm *SessionsManager) AddSession(session Session) {
-	// it probably can override existing id. make sure it won't happen
+	id := session.GetID()
+	if _, exists := sm.sessions[id]; exists {
+		fmt.Printf("Session %s already exists. Skipping.\n", id)
+		return
+	}
 	sm.sessions[session.GetID()] = session
 }
 
-func (sm *SessionsManager) RemoveSession(id string) {
+func (sm *SessionsManager) RemoveSession(id string) error {
 	session, ok := sm.sessions[id]
-	if ok {
-		session.Close()
-		delete(sm.sessions, id)
+	if !ok {
+		return errors.New(fmt.Sprintf("Session %s does not exist", id))
 	}
+	session.Close()
+	delete(sm.sessions, id)
+	return nil
 }
 
 func (sm *SessionsManager) GetSession(id string) (Session, error) {
@@ -44,7 +50,7 @@ func (sm *SessionsManager) GetSession(id string) (Session, error) {
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("session %s not found", id))
 	}
-	if session.HasExpired() {
+	if session.HasClientSecretExpired() {
 		sm.RemoveSession(id)
 		return nil, errors.New(fmt.Sprintf("session %s has expired", id))
 	}
