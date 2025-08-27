@@ -40,6 +40,12 @@ You can print the current config or update API/model fields.`,
 		if modelInstr != "" {
 			cfg.Model.Instruction = modelInstr
 		}
+
+		if err := cfg.Save(); err != nil {
+			fmt.Println(err)
+			return
+		}
+
 		if printConfig {
 			cfgJson, _ := json.Marshal(cfg)
 			fmt.Println(string(cfgJson))
