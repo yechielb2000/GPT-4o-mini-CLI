@@ -17,22 +17,15 @@ import (
 	"time"
 )
 
-var (
-	config = api.GetConfig()
-)
-
-type Message struct {
-	sender  string
-	content []byte
-}
+var config = api.GetConfig()
 
 type RealtimeSession struct {
 	sendChannel    chan []byte
 	conn           *websocket.Conn
 	done           chan struct{}
 	readyForInput  chan struct{}
-	ConversationID string
 	SessionID      string
+	ConversationID string
 	ClientSecret   ClientSecret
 }
 
@@ -42,13 +35,13 @@ func NewRealtimeSession() (*RealtimeSession, error) {
 		done:          make(chan struct{}),
 		readyForInput: make(chan struct{}, 1),
 	}
-	createSessionRes, err := createNewSession()
+	createSessionRes, err := configureModel()
 	if err != nil {
 		return nil, err
 	}
-	session.ClientSecret = createSessionRes.ClientSecret
 	session.SessionID = createSessionRes.Id
-	conn, err := session.createNewSocketConnection()
+	session.ClientSecret = createSessionRes.ClientSecret
+	conn, err := session.establishConnection()
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +49,8 @@ func NewRealtimeSession() (*RealtimeSession, error) {
 	return session, err
 }
 
-func createNewSession() (*CreateSessionHTTPResponse, error) {
-	bodyBytes, _ := json.Marshal(CreateSessionHTTPRequest{
+func configureModel() (*ConfigureModelResponse, error) {
+	bodyBytes, _ := json.Marshal(ConfigureModelRequest{
 		Modalities:   []string{"text"},
 		Model:        config.Model.Name,
 		Instructions: config.Model.Instruction,
@@ -74,7 +67,7 @@ func createNewSession() (*CreateSessionHTTPResponse, error) {
 	}
 	defer res.Body.Close()
 
-	sessionMetadata := &CreateSessionHTTPResponse{}
+	sessionMetadata := &ConfigureModelResponse{}
 	if res.StatusCode == 200 {
 		data, _ := io.ReadAll(res.Body)
 		err = json.Unmarshal(data, &sessionMetadata)
@@ -84,7 +77,7 @@ func createNewSession() (*CreateSessionHTTPResponse, error) {
 	return sessionMetadata, err
 }
 
-func (s *RealtimeSession) createNewSocketConnection() (*websocket.Conn, error) {
+func (s *RealtimeSession) establishConnection() (*websocket.Conn, error) {
 	headers := http.Header{}
 	headers.Add("Authorization", "Bearer "+s.ClientSecret.Value)
 	headers.Add("OpenAI-Beta", "realtime=v1")
@@ -96,16 +89,19 @@ func (s *RealtimeSession) createNewSocketConnection() (*websocket.Conn, error) {
 
 func (s *RealtimeSession) Start() {
 	if s.HasExpired() {
-		log.Println("RealtimeSession is expired, start a new one.")
+		log.Println("The session is expired, start a new one.")
 		return
 	}
-	go s.readData()
-	go s.writeData()
+
+	go s.receiveData()
+	go s.sendData()
 	go s.handleUserInput()
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
+
 	s.readyForInput <- struct{}{}
+
 	select {
 	case <-s.done:
 		log.Println("connection closed by server")
@@ -147,11 +143,11 @@ func (s *RealtimeSession) handleUserInput() {
 			return
 		}
 
-		s.sendRequest(text)
+		s.sendMessage(text)
 	}
 }
 
-func (s *RealtimeSession) readData() {
+func (s *RealtimeSession) receiveData() {
 	defer close(s.done)
 
 	for {
@@ -164,7 +160,7 @@ func (s *RealtimeSession) readData() {
 	}
 }
 
-func (s *RealtimeSession) writeData() {
+func (s *RealtimeSession) sendData() {
 	for msg := range s.sendChannel {
 		if err := s.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 			log.Println("write error:", err)
@@ -179,30 +175,49 @@ func (s *RealtimeSession) handleMessage(message []byte) {
 		log.Println("unmarshal error:", err)
 	}
 	switch sessionRes["type"] {
+	case "response.created":
+		resObj := sessionRes["response"].(map[string]interface{})
+		s.ConversationID = resObj["conversation_id"].(string)
 	case "response.text.delta":
 		fmt.Print(sessionRes["delta"])
 	case "response.done":
 		fmt.Println()
 		s.readyForInput <- struct{}{}
+	case "error":
+		fmt.Println(sessionRes["error"])
+	default:
+		fmt.Println(sessionRes["type"])
 	}
 }
 
-func (s *RealtimeSession) sendRequest(text string) {
-	msgResConfig := MessageResponseConfig{
-		Modalities:   []string{"text"},
-		Instructions: text,
+func (s *RealtimeSession) sendMessage(text string) {
+	messageInput := []MessageInput{
+		{
+			Type:    "message",
+			Role:    "user",
+			Content: []MessageContent{{Text: text, Type: "input_text"}},
+		},
 	}
+	messageRes := MessageResponse{
+		ConversationID: s.ConversationID,
+		Modalities:     []string{"text"},
+		Input:          messageInput,
+	}
+	message := Message{Type: "response.create", Response: messageRes}
+
 	if s.ConversationID != "" {
-		msgResConfig.Conversation = s.ConversationID
+		message.Response.ConversationID = s.ConversationID
 	}
 
-	req := &MessageRequest{
-		Type:     "response.create",
-		Response: msgResConfig,
-	}
+	rawMessage, err := json.Marshal(message)
 
-	data, _ := json.Marshal(req)
-	s.sendChannel <- data
+	g := make(map[string]interface{})
+	_ = json.Unmarshal(rawMessage, &g)
+	fmt.Println(g)
+	if err != nil {
+		log.Println("marshal error:", err)
+	}
+	s.sendChannel <- rawMessage
 }
 
 func (s *RealtimeSession) handleFunctionCalls() {

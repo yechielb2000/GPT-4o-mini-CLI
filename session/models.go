@@ -1,33 +1,40 @@
 package session
 
-type ClientSecret struct {
-	Value     string `json:"value"`
-	ExpiresAt int64  `json:"expires_at"`
-}
-
-type CreateSessionHTTPRequest struct {
+type ConfigureModelRequest struct {
 	Modalities   []string `json:"modalities"`
 	Model        string   `json:"model"`
 	Instructions string   `json:"instructions"`
 }
 
-type CreateSessionHTTPResponse struct {
+type ConfigureModelResponse struct {
 	Id           string       `json:"id"`
 	Object       string       `json:"object"`
-	Model        string       `json:"model"`
-	Modalities   []string     `json:"modalities"`
-	Instructions string       `json:"instructions"`
-	ExpiresAt    int          `json:"expires_at"`
 	ClientSecret ClientSecret `json:"client_secret"`
 }
 
-type MessageResponseConfig struct {
-	Modalities   []string `json:"modalities"`
-	Instructions string   `json:"instructions"`
-	Conversation string   `json:"conversation,omitempty"`
+type ClientSecret struct {
+	Value     string `json:"value"`
+	ExpiresAt int64  `json:"expires_at"`
 }
 
-type MessageRequest struct {
-	Type     string                `json:"type"`
-	Response MessageResponseConfig `json:"response"`
+type Message struct {
+	Type     string          `json:"type"`
+	Response MessageResponse `json:"response"`
+}
+
+type MessageResponse struct {
+	ConversationID string         `json:"conversation,omitempty"`
+	Modalities     []string       `json:"modalities"`
+	Input          []MessageInput `json:"input"`
+}
+
+type MessageInput struct {
+	Type    string           `json:"type"`
+	Role    string           `json:"role"`
+	Content []MessageContent `json:"content"`
+}
+
+type MessageContent struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
 }
