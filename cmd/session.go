@@ -36,17 +36,21 @@ var sessionCmd = &cobra.Command{
 			args := strings.Split(input, " ")
 			command := args[0]
 
-			switch command {
-			case "list":
-				for id, s := range sessionsManager.Sessions() {
-					fmt.Printf("ID: %s | Type: %s\n", id, s.GetType())
-				}
-			case "exit", "quit":
-				fmt.Println("Exiting session manager...")
-				return
-			}
+			handleCommand(command, args[1:])
 		}
 	},
+}
+
+func handleCommand(command string, args []string) {
+	switch command {
+	case "list":
+		for id, s := range sessionsManager.Sessions() {
+			fmt.Printf("ID: %s | Type: %s\n", id, s.GetType())
+		}
+	case "exit", "quit":
+		fmt.Println("Exiting session manager...")
+		return
+	}
 }
 
 func init() {
