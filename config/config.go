@@ -33,6 +33,17 @@ func NewApiConfig() *Config {
 	return config
 }
 
+func (c *Config) Save() error {
+	data, err := yaml.Marshal(c)
+	if err != nil {
+		return fmt.Errorf("failed to parse config: %w", err)
+	}
+	if err := os.WriteFile(ConfigFilePath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+	return nil
+}
+
 func GetConfig() *Config {
 	once.Do(func() {
 		instance = NewApiConfig()
