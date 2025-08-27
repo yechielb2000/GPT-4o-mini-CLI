@@ -85,6 +85,8 @@ func handleCommand(command string, args []string) {
 	case "exit", "quit":
 		fmt.Println("Exiting session manager...")
 		return
+	default:
+		fmt.Println("Unknown command. Available: list, new, resume <id>, delete <id>, exit")
 	}
 }
 
