@@ -49,10 +49,10 @@ You can print the current config or update API/model fields.`,
 func init() {
 	rootCmd.AddCommand(configCmd)
 
-	apiCmd.Flags().BoolVarP(&printConfig, "print", "p", false, "Print current config.")
-	apiCmd.Flags().StringVar(&apiKey, "key", "", "Set API key.")
-	apiCmd.Flags().StringVar(&apiHost, "host", "", "Set API host.")
-	apiCmd.Flags().StringVar(&apiSchema, "schema", "", "Set API schema (wss/ws/http).")
-	apiCmd.Flags().StringVar(&modelName, "model", "", "Set model name.")
-	apiCmd.Flags().StringVar(&modelInstr, "instruction", "", "Set model instruction.")
+	configCmd.Flags().BoolVarP(&printConfig, "print", "p", false, "Print current config.")
+	configCmd.Flags().StringVar(&apiKey, "key", "", "Set API key.")
+	configCmd.Flags().StringVar(&apiHost, "host", "", "Set API host.")
+	configCmd.Flags().StringVar(&apiSchema, "schema", "", "Set API schema (wss/ws/http).")
+	configCmd.Flags().StringVar(&modelName, "model", "", "Set model name.")
+	configCmd.Flags().StringVar(&modelInstr, "instruction", "", "Set model instruction.")
 }
