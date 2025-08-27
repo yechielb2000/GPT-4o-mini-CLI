@@ -1,4 +1,4 @@
-package api
+package config
 
 type Api struct {
 	Key    string `json:"key"`
@@ -12,6 +12,6 @@ type Model struct {
 }
 
 type Config struct {
-	Api   Api   `json:"api"`
+	Api   Api   `json:"config"`
 	Model Model `json:"model"`
 }

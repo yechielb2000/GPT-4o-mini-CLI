@@ -1,11 +1,11 @@
 package session
 
 import (
-	"gpt4omini/api"
+	"gpt4omini/config"
 	"time"
 )
 
-var config = api.GetConfig()
+var config = config.GetConfig()
 
 // Session is the common interface for all session types.
 type Session interface {

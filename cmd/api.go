@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const ApiCmd string = "api"
+const ApiCmd string = "config"
 const ApiKeyCmd string = "key"
 
 var (
@@ -13,12 +13,12 @@ var (
 	apiKey     string
 )
 
-// apiCmd subcommand handles all api related actions
+// apiCmd subcommand handles all config related actions
 var apiCmd = &cobra.Command{
 	Use:   ApiCmd,
-	Short: "Make api actions",
-	Long: `Make api actions.
-For example: set the api key of the gpt-4o-mini`,
+	Short: "Make config actions",
+	Long: `Make config actions.
+For example: set the config key of the gpt-4o-mini`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if apiBaseURL == "" {
 			//TODO: validate it better of course..
@@ -29,9 +29,9 @@ For example: set the api key of the gpt-4o-mini`,
 }
 
 /*
-apiKeyCmd subcommand handles api key actions such as edit api key or print current key.
-api key --new "newkey" | set new api key.
-api key -p | prints current api key.
+apiKeyCmd subcommand handles config key actions such as edit config key or print current key.
+config key --new "newkey" | set new config key.
+config key -p | prints current config key.
 */
 var apiKeyCmd = &cobra.Command{
 	Use:   ApiKeyCmd,
@@ -51,8 +51,8 @@ var apiKeyCmd = &cobra.Command{
 
 func init() {
 	apiCmd.AddCommand(apiKeyCmd)
-	apiKeyCmd.Flags().BoolVarP(&printKey, "print", "p", false, "Print current api key.")
-	apiKeyCmd.Flags().StringVar(&apiKey, "new", "", "Set new api key.")
+	apiKeyCmd.Flags().BoolVarP(&printKey, "print", "p", false, "Print current config key.")
+	apiKeyCmd.Flags().StringVar(&apiKey, "new", "", "Set new config key.")
 	apiKeyCmd.MarkFlagsMutuallyExclusive("print", "new")
 	rootCmd.AddCommand(apiCmd)
 	//TODO: see how to use bind

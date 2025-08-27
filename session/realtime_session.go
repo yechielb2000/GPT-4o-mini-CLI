@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
-	"gpt4omini/api"
+	"gpt4omini/config"
 	"io"
 	"log"
 	"net/http"
@@ -54,7 +54,7 @@ func configureModel() (*ConfigureModelResponse, error) {
 		Model:        config.Model.Name,
 		Instructions: config.Model.Instruction,
 	})
-	u := "https://" + config.Api.Host + api.RealtimeSessionsPath
+	u := "https://" + config.Api.Host + config.RealtimeSessionsPath
 	req, _ := http.NewRequest("POST", u, bytes.NewReader(bodyBytes))
 	req.Header.Set("Authorization", "Bearer "+config.Api.Key)
 	req.Header.Set("Content-Type", "application/json")
@@ -80,7 +80,7 @@ func (s *RealtimeSession) establishConnection() (*websocket.Conn, error) {
 	headers.Add("Authorization", "Bearer "+s.ClientSecret.Value)
 	headers.Add("OpenAI-Beta", "realtime=v1")
 
-	url := api.GetURL(api.RealtimePath)
+	url := config.GetURL(config.RealtimePath)
 	conn, _, err := websocket.DefaultDialer.Dial(url.String(), headers)
 	return conn, err
 }
