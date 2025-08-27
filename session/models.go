@@ -1,5 +1,7 @@
 package session
 
+import "gpt4omini/types"
+
 type ConfigureModelRequest struct {
 	Modalities   []string `json:"modalities"`
 	Model        string   `json:"model"`
@@ -23,17 +25,6 @@ type Message struct {
 }
 
 type MessageResponse struct {
-	Modalities []string       `json:"modalities"`
-	Input      []MessageInput `json:"input"`
-}
-
-type MessageInput struct {
-	Type    string           `json:"type"`
-	Role    string           `json:"role"`
-	Content []MessageContent `json:"content"`
-}
-
-type MessageContent struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
+	Modalities []string        `json:"modalities"`
+	Input      []types.Message `json:"input"`
 }
