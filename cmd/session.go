@@ -17,7 +17,7 @@ var (
 var sessionCmd = &cobra.Command{
 	Use:   SessionName,
 	Short: "Make session actions",
-	Long:  "",
+	Long:  "Manage realtime sessions (create, list, resume, delete) in an interactive CLI until you exit.",
 	Run: func(cmd *cobra.Command, args []string) {
 	},
 }

@@ -34,14 +34,15 @@ func NewRealtimeSession() (*RealtimeSession, error) {
 		done:          make(chan struct{}),
 		readyForInput: make(chan struct{}, 1),
 	}
+	session.Type = "realtime"
 	createSessionRes, err := configureModel()
 	if err != nil {
 		return nil, err
 	}
 
 	session.ID = createSessionRes.Id
-	session.ClientSecret = createSessionRes.ClientSecret
-	session.CreatedAt = time.Now()
+	session.clientSecret = createSessionRes.ClientSecret
+	session.createdAt = time.Now()
 
 	conn, err := session.establishConnection()
 	if err != nil {
@@ -80,7 +81,7 @@ func configureModel() (*types.ConfigureModelResponse, error) {
 
 func (s *RealtimeSession) establishConnection() (*websocket.Conn, error) {
 	headers := http.Header{}
-	headers.Add("Authorization", "Bearer "+s.ClientSecret.Value)
+	headers.Add("Authorization", "Bearer "+s.clientSecret.Value)
 	headers.Add("OpenAI-Beta", "realtime=v1")
 
 	url := config.GetURL(config.RealtimePath)
@@ -89,7 +90,7 @@ func (s *RealtimeSession) establishConnection() (*websocket.Conn, error) {
 }
 
 func (s *RealtimeSession) Start() {
-	if s.HasExpired() {
+	if s.HasClientSecretExpired() {
 		log.Println("The session is expired, start a new one.")
 		return
 	}
