@@ -35,12 +35,14 @@ func (sm *SessionsManager) AddSession(session Session) {
 	sm.sessions[session.GetID()] = session
 }
 
-func (sm *SessionsManager) RemoveSession(id string) {
+func (sm *SessionsManager) RemoveSession(id string) error {
 	session, ok := sm.sessions[id]
-	if ok {
-		session.Close()
-		delete(sm.sessions, id)
+	if !ok {
+		return errors.New(fmt.Sprintf("Session %s does not exist", id))
 	}
+	session.Close()
+	delete(sm.sessions, id)
+	return nil
 }
 
 func (sm *SessionsManager) GetSession(id string) (Session, error) {
