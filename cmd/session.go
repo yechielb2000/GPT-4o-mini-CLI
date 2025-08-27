@@ -61,6 +61,19 @@ func handleCommand(command string, args []string) {
 		sessionsManager.AddSession(newSession)
 		fmt.Printf("Started new %s session with ID %s\n\n", newSession.GetType(), newSession.GetID())
 		go newSession.Start()
+	case "resume":
+		if len(args) < 2 {
+			fmt.Println("Usage: resume <sessionID>")
+			return
+		}
+		id := args[1]
+		s, err := sessionsManager.GetSession(id)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		fmt.Printf("Resuming %s session %s\n", s.GetType(), id)
+		go s.Start()
 	case "exit", "quit":
 		fmt.Println("Exiting session manager...")
 		return
