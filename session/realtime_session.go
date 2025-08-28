@@ -69,7 +69,7 @@ func (s *RealtimeSession) Start() {
 	s.wg.Add(4)
 	go s.readMessages()
 	go s.sendMessages()
-	go s.handleIncomingMessage()
+	go s.handleIncomingEvents()
 	go s.handleUserInput()
 
 	interrupt := make(chan os.Signal, 1)
@@ -166,7 +166,7 @@ func (s *RealtimeSession) sendMessages() {
 	}
 }
 
-func (s *RealtimeSession) handleIncomingMessage() {
+func (s *RealtimeSession) handleIncomingEvents() {
 	defer s.wg.Done()
 	for {
 		select {
@@ -198,10 +198,6 @@ func (s *RealtimeSession) handleIncomingMessage() {
 			}
 		}
 	}
-}
-
-func (s *RealtimeSession) handleFunctionCalls() {
-	// TODO: maybe we will have an Action / Tool singleton with these options
 }
 
 func configureModel() (*types.ConfigureModelResponse, error) {
