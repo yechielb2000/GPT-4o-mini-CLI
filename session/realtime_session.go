@@ -28,8 +28,6 @@ type RealtimeSession struct {
 	messageChannel   chan []byte
 	readyForInput    chan struct{}
 	conn             *websocket.Conn
-	ctx              context.Context
-	cancel           context.CancelFunc
 }
 
 func NewRealtimeSession() (*RealtimeSession, error) {
@@ -143,10 +141,6 @@ func (s *RealtimeSession) Close() {
 	close(s.readyForInput)
 
 }
-
-func (s *RealtimeSession) Exit() {}
-
-func (s *RealtimeSession) Resume() {}
 
 func (s *RealtimeSession) handleUserInput() {
 	reader := bufio.NewScanner(os.Stdin)
