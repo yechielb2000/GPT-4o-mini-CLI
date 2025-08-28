@@ -119,7 +119,6 @@ func (s *RealtimeSession) Start() {
 	case <-interrupt:
 		log.Println("Interrupt received, closing connection")
 		s.Close()
-		s.cancel()
 	}
 }
 
@@ -138,6 +137,10 @@ func (s *RealtimeSession) Close() {
 	if s.cancel != nil {
 		s.cancel()
 	}
+
+	close(s.outgoingMessages)
+	close(s.incomingMessages)
+	close(s.readyForInput)
 
 }
 
