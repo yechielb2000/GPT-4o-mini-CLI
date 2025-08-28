@@ -63,7 +63,9 @@ var sessionCmd = &cobra.Command{
 					return
 				}
 				fmt.Printf("Resuming %s session %s\n", s.GetType(), id)
-				s.Start()
+				if err := s.Resume(); err != nil {
+					log.Println(err)
+				}
 			case "delete":
 				if len(args) < 1 {
 					fmt.Println("Usage: delete <sessionID>")
