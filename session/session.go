@@ -19,7 +19,6 @@ type BaseSession struct {
 	createdAt    time.Time
 	ctx          context.Context
 	cancel       context.CancelFunc
-	paused       bool
 	mu           sync.Mutex
 }
 
