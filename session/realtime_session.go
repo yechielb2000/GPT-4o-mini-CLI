@@ -105,6 +105,7 @@ func (s *RealtimeSession) Start() {
 
 	go s.readMessages(ctx)
 	go s.sendMessages(ctx)
+	go s.handleIncomingMessage(ctx)
 	go s.handleUserInput(ctx)
 
 	interrupt := make(chan os.Signal, 1)
@@ -126,8 +127,15 @@ func (s *RealtimeSession) Close() {
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
 	)
 	time.Sleep(100 * time.Millisecond)
-	s.conn.Close()
+	err := s.conn.Close()
+	if err != nil {
+		log.Println("Warning: Failed to close connection", err)
+	}
 }
+
+func (s *RealtimeSession) Exit() {}
+
+func (s *RealtimeSession) Resume() {}
 
 func (s *RealtimeSession) handleUserInput(ctx context.Context) {
 	reader := bufio.NewScanner(os.Stdin)
@@ -187,26 +195,31 @@ func (s *RealtimeSession) sendMessages(ctx context.Context) {
 	}
 }
 
-func (s *RealtimeSession) handleMessage(message []byte) {
-	sessionRes := map[string]any{}
-	if err := json.Unmarshal(message, &sessionRes); err != nil {
-		log.Println("unmarshal error:", err)
-		return
-	}
-
-	switch sessionRes["type"] {
-	case events.ResponseCreated:
-		log.Println("session created")
-	case events.ResponseTextDelta:
-		fmt.Println(sessionRes["delta"])
-	case events.ResponseDone:
+func (s *RealtimeSession) handleIncomingMessage(ctx context.Context) {
+	for {
 		select {
-		case s.readyForInput <- struct{}{}:
-		default:
-		}
-	case events.Error:
-		if errObj, ok := sessionRes["error"].(map[string]any); ok {
-			fmt.Println(errObj["message"])
+		case <-ctx.Done():
+			return
+		case message := <-s.incomingMessages:
+			sessionRes := map[string]any{}
+			if err := json.Unmarshal(message, &sessionRes); err != nil {
+				log.Println("unmarshal error:", err)
+				return
+			}
+			switch sessionRes["type"] {
+			case events.ResponseDone:
+				fmt.Println()
+				select {
+				case s.readyForInput <- struct{}{}:
+				default:
+				}
+			case events.ResponseTextDelta:
+				fmt.Print(sessionRes["delta"])
+			case events.Error:
+				if errObj, ok := sessionRes["error"].(map[string]any); ok {
+					fmt.Println(errObj["message"])
+				}
+			}
 		}
 	}
 }

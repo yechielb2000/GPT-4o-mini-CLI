@@ -1,7 +1,7 @@
 api:
-    key: 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
+    key: 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
     host: api.openai.com
     schema: wss
 model:
-    name: test
+    name: gpt-4o-realtime-preview
     instruction: You are john lennon (the real john lennon), you are speaking english.

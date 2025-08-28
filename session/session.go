@@ -62,6 +62,8 @@ func (bs *BaseSession) String() string {
 type Session interface {
 	Start()
 	Close()
+	Exit()
+	Resume()
 	GetID() string
 	GetType() string
 	HasClientSecretExpired() bool

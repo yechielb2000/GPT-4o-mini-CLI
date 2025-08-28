@@ -54,3 +54,8 @@ gptoncli:
             - model: update the model type.
             - instruction: update the default initiative instructions for each session.
 ```
+
+
+## Sessions Examples:
+
+![session_example.png](assets/session_example.png)
