@@ -135,6 +135,10 @@ func (s *RealtimeSession) Close() {
 		}
 	}
 
+	if s.cancel != nil {
+		s.cancel()
+	}
+
 }
 
 func (s *RealtimeSession) Exit() {}
