@@ -33,13 +33,9 @@ func NewClientToolResult(name string, result any) types.FunctionCallContent {
 	}
 }
 
-func NewClientItemCreateEvent(contents []types.Content, itemType types.ConversationItemType) events.ConversationItemCreateEvent {
+func NewClientItemCreateEvent(item types.ConversationItem) events.ConversationItemCreateEvent {
 	return events.ConversationItemCreateEvent{
 		Type: events.ConversationItemCreateEventType,
-		Item: types.ConversationItem{
-			Type:    itemType,
-			Role:    ClientName,
-			Content: contents,
-		},
+		Item: item,
 	}
 }

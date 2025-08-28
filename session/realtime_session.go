@@ -170,14 +170,12 @@ func (s *RealtimeSession) handleIncomingEvents() {
 		case <-s.ctx.Done():
 			return
 		case message := <-s.incomingMessages:
-			// TODO: find the full structure of Response
-			sessionRes := map[string]any{}
-			var item = types.ConversationItem{}
-			if err := json.Unmarshal(message, &sessionRes); err != nil {
+			event := events.Event{}
+			if err := json.Unmarshal(message, &event); err != nil {
 				log.Println("unmarshal error:", err)
 				return
 			}
-			switch sessionRes["type"] {
+			switch event.Type {
 			case events.ResponseDone:
 				fmt.Println()
 				select {
@@ -185,36 +183,36 @@ func (s *RealtimeSession) handleIncomingEvents() {
 				default:
 				}
 			case events.ResponseTextDelta:
-				event, _ := builders.BuildEvent(message)
 				for _, r := range event.Delta {
 					fmt.Printf("%c", r)
 					time.Sleep(22 * time.Millisecond)
 				}
 			case events.ResponseOutputItemDone:
-				if item.Type == "function_call" {
-					//if err := s.handleFunctionCalls(item); err != nil {
-					//	log.Println("handleFunctionCalls error:", err)
-					//	return
-					//}
+				if event.Item.Type == "function_call" {
+					if err := s.handleFunctionCalls(event.Item); err != nil {
+						log.Println("handleFunctionCalls error:", err)
+						return
+					}
 				}
 			case events.Error:
-				if errObj, ok := sessionRes["error"].(map[string]any); ok {
-					fmt.Println(errObj["message"])
-				}
+				fmt.Println(event.Error.Message)
 			}
 		}
 	}
 }
 
-func (s *RealtimeSession) handleFunctionCalls(item map[string]interface{}) error {
-	functionCall, err := global_tools.GetFunctionCallFromItem(item)
-	if err != nil {
-		return err
-	}
-	if function, ok := global_tools.Factory[functionCall.Name]; ok {
-		result := function(functionCall.Args)
-		toolRes := builders.NewClientToolResult(functionCall.Name, result)
-		itemCreate := builders.NewClientItemCreateEvent([]types.Content{toolRes}, types.FunctionCallOutputItem)
+func (s *RealtimeSession) handleFunctionCalls(item types.ConversationItem) error {
+	if function, ok := global_tools.Factory[item.Name]; ok {
+		args, err := item.GetArguments()
+		if err != nil {
+			return err
+		}
+		result := function(args)
+		toolRes := builders.NewClientToolResult(item.Name, result)
+		item.Content = []types.Content{toolRes}
+		item.Type = types.FunctionCallOutputItem
+		item.Output = "output"
+		itemCreate := builders.NewClientItemCreateEvent(item)
 		message, _ := json.Marshal(itemCreate)
 		s.outgoingMessages <- message
 	}

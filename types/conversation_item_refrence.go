@@ -1,5 +1,7 @@
 package types
 
+import "encoding/json"
+
 // Source: https://github.com/openai/openai-python/blob/main/src/openai/types/beta/realtime/conversation_item_with_reference.py
 
 type ConversationItemType string
@@ -13,7 +15,7 @@ const (
 
 type ConversationItem struct {
 	ID        string               `json:"id,omitempty"`        // Unique ID or reference to previous item
-	Arguments interface{}          `json:"arguments,omitempty"` // Arguments for function call
+	Arguments string               `json:"arguments,omitempty"` // Arguments for function call
 	CallID    string               `json:"call_id,omitempty"`   // Function call ID
 	Content   []Content            `json:"content,omitempty"`   // Message contents (should maybe refer to a different content object)
 	Name      string               `json:"name,omitempty"`      // Function name
@@ -22,4 +24,12 @@ type ConversationItem struct {
 	Role      string               `json:"role,omitempty"`      // "user", "assistant", "system"
 	Status    string               `json:"status,omitempty"`    // "completed", "incomplete", "in_progress"
 	Type      ConversationItemType `json:"type,omitempty"`      // "message", "function_call", "function_call_output", "item_reference"
+}
+
+func (c *ConversationItem) GetArguments() (map[string]interface{}, error) {
+	var m map[string]interface{}
+	if err := json.Unmarshal([]byte(c.Arguments), &m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }

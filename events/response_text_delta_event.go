@@ -12,4 +12,5 @@ type Event struct {
 	Type         string                 `json:"type"`          // Must be "response.text.delta"
 	Item         types.ConversationItem `json:"item,omitempty"`
 	Obfuscation  string                 `json:"obfuscation,omitempty"`
+	Error        types.Error            `json:"error,omitempty"`
 }
