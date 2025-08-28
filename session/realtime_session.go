@@ -97,8 +97,7 @@ func (s *RealtimeSession) Start() {
 		return
 	}
 
-	go s.receiveData()
-	go s.sendData()
+	go s.receiveMessageResponse()
 	go s.handleUserInput()
 
 	interrupt := make(chan os.Signal, 1)
@@ -146,7 +145,7 @@ func (s *RealtimeSession) handleUserInput() {
 	}
 }
 
-func (s *RealtimeSession) receiveData() {
+func (s *RealtimeSession) receiveMessageResponse() {
 	defer close(s.done)
 
 	for {
@@ -156,15 +155,6 @@ func (s *RealtimeSession) receiveData() {
 			return
 		}
 		s.handleMessage(message)
-	}
-}
-
-func (s *RealtimeSession) sendData() {
-	for msg := range s.sendChannel {
-		if err := s.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
-			log.Println("write error:", err)
-			return
-		}
 	}
 }
 
@@ -182,9 +172,8 @@ func (s *RealtimeSession) handleMessage(message []byte) {
 		fmt.Println()
 		s.readyForInput <- struct{}{}
 	case events.Error:
-		fmt.Println(sessionRes["error"])
-	default:
-		fmt.Println(sessionRes["type"])
+		errorObj := sessionRes["error"].(map[string]any)
+		fmt.Println(errorObj["message"])
 	}
 }
 
@@ -197,7 +186,9 @@ func (s *RealtimeSession) sendMessage(text string) {
 	if err != nil {
 		log.Println("marshal error:", err)
 	}
-	s.sendChannel <- rawMessage
+	if err := s.conn.WriteMessage(websocket.TextMessage, rawMessage); err != nil {
+		log.Println("Error while sending message:", err)
+	}
 }
 
 func (s *RealtimeSession) handleFunctionCalls() {
