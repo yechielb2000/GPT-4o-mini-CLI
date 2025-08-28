@@ -18,7 +18,6 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -143,15 +142,8 @@ func (s *RealtimeSession) readMessages() {
 		case <-s.ctx.Done():
 			return
 		default:
-			_ = s.conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 			_, msg, err := s.conn.ReadMessage()
 			if err != nil {
-				if websocket.IsCloseError(err, websocket.CloseNormalClosure) || os.IsTimeout(err) {
-					return
-				}
-				if strings.Contains(err.Error(), "use of closed network connection") {
-					return
-				}
 				log.Println("read error:", err)
 				return
 			}
