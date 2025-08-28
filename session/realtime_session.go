@@ -27,7 +27,6 @@ type RealtimeSession struct {
 	incomingMessages chan []byte
 	messageChannel   chan []byte
 	conn             *websocket.Conn
-	done             chan struct{}
 	readyForInput    chan struct{}
 }
 
@@ -39,7 +38,6 @@ func NewRealtimeSession() (*RealtimeSession, error) {
 		outgoingMessages: make(chan []byte),
 		incomingMessages: make(chan []byte),
 		messageChannel:   make(chan []byte),
-		done:             make(chan struct{}),
 		readyForInput:    make(chan struct{}, 1),
 	}
 
@@ -115,11 +113,10 @@ func (s *RealtimeSession) Start() {
 	s.readyForInput <- struct{}{}
 
 	select {
-	case <-s.done:
-		log.Println("connection closed by server")
 	case <-interrupt:
-		log.Println("interrupt received, closing connection")
+		log.Println("Interrupt received, closing connection")
 		s.Close()
+		cancel()
 	}
 }
 
@@ -162,7 +159,6 @@ func (s *RealtimeSession) handleUserInput(ctx context.Context) {
 }
 
 func (s *RealtimeSession) readMessages(ctx context.Context) {
-	defer close(s.done)
 	for {
 		select {
 		case <-ctx.Done():
