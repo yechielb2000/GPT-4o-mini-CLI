@@ -10,6 +10,7 @@ import (
 	"gpt4omini/config"
 	"gpt4omini/events"
 	"gpt4omini/global_tools"
+	"gpt4omini/types"
 	"log"
 	"net/http"
 	"os"
@@ -169,7 +170,9 @@ func (s *RealtimeSession) handleIncomingEvents() {
 		case <-s.ctx.Done():
 			return
 		case message := <-s.incomingMessages:
+			// TODO: find the full structure of Response
 			sessionRes := map[string]any{}
+			var item = types.ConversationItem{}
 			if err := json.Unmarshal(message, &sessionRes); err != nil {
 				log.Println("unmarshal error:", err)
 				return
@@ -182,28 +185,17 @@ func (s *RealtimeSession) handleIncomingEvents() {
 				default:
 				}
 			case events.ResponseTextDelta:
-				delta := sessionRes["delta"].(string)
-				for _, r := range delta {
+				event, _ := builders.BuildEvent(message)
+				for _, r := range event.Delta {
 					fmt.Printf("%c", r)
 					time.Sleep(22 * time.Millisecond)
 				}
 			case events.ResponseOutputItemDone:
-				item := sessionRes["item"].(map[string]any)
-				if item["type"] == "function_call" {
-					name := item["name"].(string)
-					var args map[string]interface{}
-					switch v := item["arguments"].(type) {
-					case string:
-						if err := json.Unmarshal([]byte(v), &args); err != nil {
-							log.Println("failed to unmarshal arguments:", err)
-							return
-						}
-					case map[string]interface{}:
-						args = v
-					}
-					function := global_tools.Factory[name]
-					result := function(args)
-					fmt.Println("result:", result)
+				if item.Type == "function_call" {
+					//if err := s.handleFunctionCalls(item); err != nil {
+					//	log.Println("handleFunctionCalls error:", err)
+					//	return
+					//}
 				}
 			case events.Error:
 				if errObj, ok := sessionRes["error"].(map[string]any); ok {
@@ -214,8 +206,19 @@ func (s *RealtimeSession) handleIncomingEvents() {
 	}
 }
 
-func handleFunctionCalls() {
-
+func (s *RealtimeSession) handleFunctionCalls(item map[string]interface{}) error {
+	functionCall, err := global_tools.GetFunctionCallFromItem(item)
+	if err != nil {
+		return err
+	}
+	if function, ok := global_tools.Factory[functionCall.Name]; ok {
+		result := function(functionCall.Args)
+		toolRes := builders.NewClientToolResult(functionCall.Name, result)
+		itemCreate := builders.NewClientItemCreateEvent([]types.Content{toolRes}, types.FunctionCallOutputItem)
+		message, _ := json.Marshal(itemCreate)
+		s.outgoingMessages <- message
+	}
+	return nil
 }
 
 func (s *RealtimeSession) establishConnection() (*websocket.Conn, error) {

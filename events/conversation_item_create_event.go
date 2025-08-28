@@ -4,8 +4,6 @@ import (
 	"gpt4omini/types"
 )
 
-const ConversationItemCreateEventType = "conversation.item.create"
-
 type ConversationItemCreateEvent struct {
 	Item           types.ConversationItem `json:"item"`                       // The item to add
 	Type           string                 `json:"type"`                       // Must be "conversation.item.create"

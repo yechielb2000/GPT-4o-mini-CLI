@@ -1,7 +1,6 @@
 package types
 
 type Metadata = map[string]interface{}
-type ConversationItem = map[string]interface{}
 
 type Error struct {
 	Message string  `json:"message,omitempty"`  // Human-readable error message

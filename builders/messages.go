@@ -5,6 +5,8 @@ import (
 	"gpt4omini/types"
 )
 
+const ClientName = "user"
+
 func NewClientTextMessage(text string) *types.ClientMessage {
 	return &types.ClientMessage{
 		Type: events.ResponseCreate,
@@ -13,12 +15,31 @@ func NewClientTextMessage(text string) *types.ClientMessage {
 			Input: []types.Message{
 				{
 					Type: "message",
-					Role: "user",
+					Role: ClientName,
 					Content: []types.Content{
 						types.TextContent{Text: text, Type: "input_text"},
 					},
 				},
 			},
+		},
+	}
+}
+
+func NewClientToolResult(name string, result any) types.FunctionCallContent {
+	return types.FunctionCallContent{
+		Type:   "tool_result",
+		Name:   name,
+		Output: result,
+	}
+}
+
+func NewClientItemCreateEvent(contents []types.Content, itemType types.ConversationItemType) events.ConversationItemCreateEvent {
+	return events.ConversationItemCreateEvent{
+		Type: events.ConversationItemCreateEventType,
+		Item: types.ConversationItem{
+			Type:    itemType,
+			Role:    ClientName,
+			Content: contents,
 		},
 	}
 }

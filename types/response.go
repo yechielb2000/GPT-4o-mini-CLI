@@ -11,7 +11,7 @@ type ResponseTool struct {
 
 type Response struct {
 	Conversation            *string        `json:"conversation,omitempty"` // "auto", "none", or nil
-	Input                   []Message      `json:"input,omitempty"`        // original obj []ConversationItemWithReference
+	Input                   []Message      `json:"input,omitempty"`        // original obj []ConversationItem
 	Instructions            *string        `json:"instructions,omitempty"`
 	MaxResponseOutputTokens any            `json:"max_response_output_tokens,omitempty"` // int or "inf"
 	Metadata                Metadata       `json:"metadata,omitempty"`

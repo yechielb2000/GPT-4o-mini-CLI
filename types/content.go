@@ -26,3 +26,10 @@ type TextContent struct {
 	Type string `json:"type"`
 	Text string `json:"text"`
 }
+
+type FunctionCallContent struct {
+	BaseContent
+	Type   string `json:"type,omitempty"`
+	Name   string `json:"name,omitempty"`
+	Output any    `json:"output,omitempty"` // or result?
+}

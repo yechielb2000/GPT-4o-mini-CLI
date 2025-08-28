@@ -18,7 +18,7 @@ type Tool struct {
 }
 
 type ToolResult struct {
-	Type   *string `json:"type,omitempty"`
-	Name   *string `json:"name,omitempty"`
-	Output *any    `json:"output,omitempty"`
+	Type   string `json:"type,omitempty"`
+	Name   string `json:"name,omitempty"`
+	Output any    `json:"output,omitempty"`
 }
