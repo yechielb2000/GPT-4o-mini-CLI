@@ -26,8 +26,10 @@ type RealtimeSession struct {
 	outgoingMessages chan []byte
 	incomingMessages chan []byte
 	messageChannel   chan []byte
-	conn             *websocket.Conn
 	readyForInput    chan struct{}
+	conn             *websocket.Conn
+	ctx              context.Context
+	cancel           context.CancelFunc
 }
 
 func NewRealtimeSession() (*RealtimeSession, error) {
@@ -100,13 +102,13 @@ func (s *RealtimeSession) Start() {
 		return
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	s.ctx, s.cancel = context.WithCancel(context.Background())
+	defer s.cancel()
 
-	go s.readMessages(ctx)
-	go s.sendMessages(ctx)
-	go s.handleIncomingMessage(ctx)
-	go s.handleUserInput(ctx)
+	go s.readMessages()
+	go s.sendMessages()
+	go s.handleIncomingMessage()
+	go s.handleUserInput()
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
@@ -117,7 +119,7 @@ func (s *RealtimeSession) Start() {
 	case <-interrupt:
 		log.Println("Interrupt received, closing connection")
 		s.Close()
-		cancel()
+		s.cancel()
 	}
 }
 
@@ -137,7 +139,7 @@ func (s *RealtimeSession) Exit() {}
 
 func (s *RealtimeSession) Resume() {}
 
-func (s *RealtimeSession) handleUserInput(ctx context.Context) {
+func (s *RealtimeSession) handleUserInput() {
 	reader := bufio.NewScanner(os.Stdin)
 	for {
 		select {
@@ -160,16 +162,16 @@ func (s *RealtimeSession) handleUserInput(ctx context.Context) {
 				continue
 			}
 			s.outgoingMessages <- message
-		case <-ctx.Done():
+		case <-s.ctx.Done():
 			return
 		}
 	}
 }
 
-func (s *RealtimeSession) readMessages(ctx context.Context) {
+func (s *RealtimeSession) readMessages() {
 	for {
 		select {
-		case <-ctx.Done():
+		case <-s.ctx.Done():
 			return
 		default:
 			_, msg, err := s.conn.ReadMessage()
@@ -182,23 +184,23 @@ func (s *RealtimeSession) readMessages(ctx context.Context) {
 	}
 }
 
-func (s *RealtimeSession) sendMessages(ctx context.Context) {
+func (s *RealtimeSession) sendMessages() {
 	for {
 		select {
 		case message := <-s.outgoingMessages:
 			if err := s.conn.WriteMessage(websocket.TextMessage, message); err != nil {
 				log.Println("send error:", err)
 			}
-		case <-ctx.Done():
+		case <-s.ctx.Done():
 			return
 		}
 	}
 }
 
-func (s *RealtimeSession) handleIncomingMessage(ctx context.Context) {
+func (s *RealtimeSession) handleIncomingMessage() {
 	for {
 		select {
-		case <-ctx.Done():
+		case <-s.ctx.Done():
 			return
 		case message := <-s.incomingMessages:
 			sessionRes := map[string]any{}
