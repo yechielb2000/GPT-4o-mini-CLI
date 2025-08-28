@@ -3,6 +3,7 @@ package session
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,10 +23,12 @@ import (
 
 type RealtimeSession struct {
 	BaseSession
-	sendChannel   chan []byte
-	conn          *websocket.Conn
-	done          chan struct{}
-	readyForInput chan struct{}
+	outgoingMessages chan []byte
+	incomingMessages chan []byte
+	messageChannel   chan []byte
+	conn             *websocket.Conn
+	done             chan struct{}
+	readyForInput    chan struct{}
 }
 
 func NewRealtimeSession() (*RealtimeSession, error) {
@@ -33,9 +36,11 @@ func NewRealtimeSession() (*RealtimeSession, error) {
 		BaseSession: BaseSession{
 			Type: "realtime",
 		},
-		sendChannel:   make(chan []byte),
-		done:          make(chan struct{}),
-		readyForInput: make(chan struct{}, 1),
+		outgoingMessages: make(chan []byte),
+		incomingMessages: make(chan []byte),
+		messageChannel:   make(chan []byte),
+		done:             make(chan struct{}),
+		readyForInput:    make(chan struct{}, 1),
 	}
 
 	if createSessionRes, err := configureModel(); err == nil {
@@ -97,8 +102,12 @@ func (s *RealtimeSession) Start() {
 		return
 	}
 
-	go s.receiveMessageResponse()
-	go s.handleUserInput()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go s.readMessages(ctx)
+	go s.sendMessages(ctx)
+	go s.handleUserInput(ctx)
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
@@ -121,40 +130,64 @@ func (s *RealtimeSession) Close() {
 	)
 	time.Sleep(100 * time.Millisecond)
 	s.conn.Close()
-	close(s.sendChannel)
 }
 
-func (s *RealtimeSession) handleUserInput() {
+func (s *RealtimeSession) handleUserInput(ctx context.Context) {
 	reader := bufio.NewScanner(os.Stdin)
-	for range s.readyForInput {
-		fmt.Print("#> ")
-		if !reader.Scan() {
-			log.Println("stdin closed, exiting input loop")
-			s.Close()
+	for {
+		select {
+		case <-s.readyForInput:
+			fmt.Printf("(%s)> ", s.GetID())
+			if !reader.Scan() {
+				log.Println("reader closed")
+				s.Close()
+				return
+			}
+			text := reader.Text()
+			if text == "#>exit" {
+				log.Println("closing session...")
+				s.Close()
+				return
+			}
+			message, err := json.Marshal(builders.NewClientTextMessage(text))
+			if err != nil {
+				log.Println("marshal error:", err)
+				continue
+			}
+			s.outgoingMessages <- message
+		case <-ctx.Done():
 			return
 		}
-		text := reader.Text()
-
-		if text == "#>exit" {
-			log.Println("closing session...")
-			s.Close()
-			return
-		}
-
-		s.sendMessage(text)
 	}
 }
 
-func (s *RealtimeSession) receiveMessageResponse() {
+func (s *RealtimeSession) readMessages(ctx context.Context) {
 	defer close(s.done)
-
 	for {
-		_, message, err := s.conn.ReadMessage()
-		if err != nil {
-			log.Println("read error:", err)
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			_, msg, err := s.conn.ReadMessage()
+			if err != nil {
+				log.Println("read error:", err)
+				return
+			}
+			s.incomingMessages <- msg
+		}
+	}
+}
+
+func (s *RealtimeSession) sendMessages(ctx context.Context) {
+	for {
+		select {
+		case message := <-s.outgoingMessages:
+			if err := s.conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				log.Println("send error:", err)
+			}
+		case <-ctx.Done():
 			return
 		}
-		s.handleMessage(message)
 	}
 }
 
@@ -162,32 +195,23 @@ func (s *RealtimeSession) handleMessage(message []byte) {
 	sessionRes := map[string]any{}
 	if err := json.Unmarshal(message, &sessionRes); err != nil {
 		log.Println("unmarshal error:", err)
+		return
 	}
+
 	switch sessionRes["type"] {
 	case events.ResponseCreated:
-		fmt.Println(sessionRes)
+		log.Println("session created")
 	case events.ResponseTextDelta:
-		fmt.Print(sessionRes["delta"])
+		fmt.Println(sessionRes["delta"])
 	case events.ResponseDone:
-		fmt.Println()
-		s.readyForInput <- struct{}{}
+		select {
+		case s.readyForInput <- struct{}{}:
+		default:
+		}
 	case events.Error:
-		errorObj := sessionRes["error"].(map[string]any)
-		fmt.Println(errorObj["message"])
-	}
-}
-
-func (s *RealtimeSession) sendMessage(text string) {
-	rawMessage, err := json.Marshal(builders.NewClientTextMessage(text))
-
-	g := make(map[string]interface{})
-	_ = json.Unmarshal(rawMessage, &g)
-	fmt.Println(g)
-	if err != nil {
-		log.Println("marshal error:", err)
-	}
-	if err := s.conn.WriteMessage(websocket.TextMessage, rawMessage); err != nil {
-		log.Println("Error while sending message:", err)
+		if errObj, ok := sessionRes["error"].(map[string]any); ok {
+			fmt.Println(errObj["message"])
+		}
 	}
 }
 
