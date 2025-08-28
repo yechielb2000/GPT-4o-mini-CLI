@@ -3,10 +3,8 @@ package session
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"gpt4omini/config"
 	"gpt4omini/types"
-	"log"
 	"sync"
 	"time"
 )
@@ -31,30 +29,6 @@ func (bs *BaseSession) GetID() string {
 
 func (bs *BaseSession) GetType() string {
 	return bs.Type
-}
-
-func (s *RealtimeSession) Stop() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.paused {
-		return
-	}
-	s.paused = true
-	if s.cancel != nil {
-		s.cancel()
-	}
-	log.Println("Session paused. Use Resume() to continue.")
-}
-
-func (s *RealtimeSession) Resume() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.paused {
-		s.Start()
-		s.paused = false
-		return nil
-	}
-	return errors.New("session is not paused")
 }
 
 func (bs *BaseSession) GetClientSecretExpirationTime() time.Time {
@@ -95,11 +69,7 @@ type Session interface {
 	// Start is the starting point for the new session.
 	Start()
 	// Close closes all connections (destroying session).
-	Close()
-	// Stop keeps the state but close the interaction between the user and the session.
-	Stop()
-	// Resume let you interact again with the session after it was exited.
-	Resume() error
+	close()
 	// GetID provides the session id.
 	GetID() string
 	// GetType provides the session type.
