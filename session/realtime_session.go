@@ -124,15 +124,17 @@ func (s *RealtimeSession) Start() {
 }
 
 func (s *RealtimeSession) Close() {
-	_ = s.conn.WriteMessage(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
-	)
-	time.Sleep(100 * time.Millisecond)
-	err := s.conn.Close()
-	if err != nil {
-		log.Println("Warning: Failed to close connection", err)
+	if s.conn != nil {
+		_ = s.conn.WriteMessage(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
+		)
+		time.Sleep(100 * time.Millisecond)
+		if err := s.conn.Close(); err != nil {
+			log.Println("Warning: Failed to close connection", err)
+		}
 	}
+
 }
 
 func (s *RealtimeSession) Exit() {}
