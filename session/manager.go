@@ -42,6 +42,7 @@ func (sm *SessionsManager) RemoveSession(id string) error {
 	}
 	session.Close()
 	delete(sm.sessions, id)
+	fmt.Printf("Session %s removed.\n", id)
 	return nil
 }
 

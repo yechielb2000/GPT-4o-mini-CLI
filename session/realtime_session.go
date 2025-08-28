@@ -139,7 +139,6 @@ func (s *RealtimeSession) Close() {
 	close(s.outgoingMessages)
 	close(s.incomingMessages)
 	close(s.readyForInput)
-
 }
 
 func (s *RealtimeSession) handleUserInput() {
@@ -157,6 +156,11 @@ func (s *RealtimeSession) handleUserInput() {
 			if text == "#>exit" {
 				log.Println("closing session...")
 				s.Close()
+				return
+			}
+			if text == "#>stop" {
+				log.Println("stopping session...")
+				s.Stop()
 				return
 			}
 			message, err := json.Marshal(builders.NewClientTextMessage(text))
@@ -219,7 +223,11 @@ func (s *RealtimeSession) handleIncomingMessage() {
 				default:
 				}
 			case events.ResponseTextDelta:
-				fmt.Print(sessionRes["delta"])
+				delta := sessionRes["delta"].(string)
+				for _, r := range delta {
+					fmt.Printf("%c", r)
+					time.Sleep(22 * time.Millisecond)
+				}
 			case events.Error:
 				if errObj, ok := sessionRes["error"].(map[string]any); ok {
 					fmt.Println(errObj["message"])
