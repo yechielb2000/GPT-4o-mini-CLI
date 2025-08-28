@@ -16,7 +16,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
 	"time"
 )
@@ -108,16 +107,7 @@ func (s *RealtimeSession) Start() {
 	go s.handleIncomingMessage()
 	go s.handleUserInput()
 
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
-
 	s.readyForInput <- struct{}{}
-
-	select {
-	case <-interrupt:
-		log.Println("Interrupt received, closing connection")
-		s.Close()
-	}
 }
 
 func (s *RealtimeSession) Close() {
