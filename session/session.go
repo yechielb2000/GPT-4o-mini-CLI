@@ -19,6 +19,7 @@ type BaseSession struct {
 	createdAt    time.Time
 	ctx          context.Context
 	cancel       context.CancelFunc
+	wg           sync.WaitGroup
 	mu           sync.Mutex
 }
 

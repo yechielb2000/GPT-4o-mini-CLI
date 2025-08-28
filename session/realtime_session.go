@@ -19,7 +19,6 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -30,7 +29,6 @@ type RealtimeSession struct {
 	messageChannel   chan []byte
 	readyForInput    chan struct{}
 	conn             *websocket.Conn
-	wg               sync.WaitGroup
 }
 
 func NewRealtimeSession() (*RealtimeSession, error) {
