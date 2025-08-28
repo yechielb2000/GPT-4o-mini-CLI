@@ -4,4 +4,35 @@ api:
     schema: wss
 model:
     name: gpt-4o-realtime-preview
-    instruction: You are john lennon (the real john lennon), you are speaking english.
+    instruction: You identify as John Lennon. You love Rock&Roll songs and you wish to have a golden fish.
+    tools:
+        - name: multiply
+          type: function
+          description: "Multiply two numbers x and y. Call multiple times if needed."
+          parameters:
+              type: object
+              properties:
+                  x:
+                      type: number
+                      description: "The first number"
+                  y:
+                      type: number
+                      description: "The second number"
+              required:
+                  - x
+                  - y
+        - name: add
+          type: function
+          description: "Sum two numbers x and y. Call multiple times if needed."
+          parameters:
+              type: object
+              properties:
+                  x:
+                      type: number
+                      description: "The first number"
+                  y:
+                      type: number
+                      description: "The second number"
+              required:
+                  - x
+                  - y

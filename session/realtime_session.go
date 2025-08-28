@@ -2,22 +2,18 @@ package session
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"gpt4omini/builders"
 	"gpt4omini/config"
 	"gpt4omini/events"
-	"gpt4omini/types"
-	"io"
+	"gpt4omini/global_tools"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"time"
 )
 
@@ -41,7 +37,7 @@ func NewRealtimeSession() (*RealtimeSession, error) {
 		readyForInput:    make(chan struct{}, 1),
 	}
 
-	if createSessionRes, err := configureModel(); err == nil {
+	if createSessionRes, err := ConfigureModel(); err == nil {
 		session.ID = createSessionRes.Id
 		session.clientSecret = createSessionRes.ClientSecret
 		session.createdAt = time.Now()
@@ -191,6 +187,24 @@ func (s *RealtimeSession) handleIncomingEvents() {
 					fmt.Printf("%c", r)
 					time.Sleep(22 * time.Millisecond)
 				}
+			case events.ResponseOutputItemDone:
+				item := sessionRes["item"].(map[string]any)
+				if item["type"] == "function_call" {
+					name := item["name"].(string)
+					var args map[string]interface{}
+					switch v := item["arguments"].(type) {
+					case string:
+						if err := json.Unmarshal([]byte(v), &args); err != nil {
+							log.Println("failed to unmarshal arguments:", err)
+							return
+						}
+					case map[string]interface{}:
+						args = v
+					}
+					function := global_tools.Factory[name]
+					result := function(args)
+					fmt.Println("result:", result)
+				}
 			case events.Error:
 				if errObj, ok := sessionRes["error"].(map[string]any); ok {
 					fmt.Println(errObj["message"])
@@ -200,31 +214,8 @@ func (s *RealtimeSession) handleIncomingEvents() {
 	}
 }
 
-func configureModel() (*types.ConfigureModelResponse, error) {
-	bodyBytes, _ := json.Marshal(types.ConfigureModelRequest{
-		Modalities:   []string{"text"},
-		Model:        cfg.Model.Name,
-		Instructions: cfg.Model.Instruction,
-	})
-	u := "https://" + cfg.Api.Host + config.RealtimeSessionsPath
-	req, _ := http.NewRequest("POST", u, bytes.NewReader(bodyBytes))
-	req.Header.Set("Authorization", "Bearer "+cfg.Api.Key)
-	req.Header.Set("Content-Type", "application/json")
+func handleFunctionCalls() {
 
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-	sessionMetadata := &types.ConfigureModelResponse{}
-	if res.StatusCode == 200 {
-		err = json.Unmarshal(body, &sessionMetadata)
-	} else {
-		err = errors.New("unexpected status code " + strconv.Itoa(res.StatusCode) + ".\n" + string(body))
-	}
-	return sessionMetadata, err
 }
 
 func (s *RealtimeSession) establishConnection() (*websocket.Conn, error) {
