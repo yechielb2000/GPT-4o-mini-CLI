@@ -20,15 +20,19 @@ var cfg = config.GetConfig()
 
 // BaseSession contains fields shared across all sessions.
 type BaseSession struct {
-	ID           string
-	Type         string
-	clientSecret types.ClientSecret
-	createdAt    time.Time
-	ctx          context.Context
-	cancel       context.CancelFunc
-	wg           sync.WaitGroup
-	mu           sync.Mutex
-	conversation []types.ConversationItem
+	ID               string
+	Type             string
+	outgoingMessages chan types.ConversationItem
+	functionCalls    chan types.ConversationItem
+	incomingEvents   chan types.Event
+	readyForInput    chan struct{}
+	clientSecret     types.ClientSecret
+	createdAt        time.Time
+	ctx              context.Context
+	cancel           context.CancelFunc
+	wg               sync.WaitGroup
+	mu               sync.Mutex
+	conversation     []types.ConversationItem
 }
 
 func (bs *BaseSession) GetID() string {

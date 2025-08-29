@@ -17,22 +17,19 @@ import (
 
 type RealtimeSession struct {
 	BaseSession
-	outgoingMessages chan types.ConversationItem
-	incomingEvents   chan types.Event
-	messageChannel   chan []byte
-	readyForInput    chan struct{}
-	conn             *websocket.Conn
+
+	conn *websocket.Conn
 }
 
 func NewRealtimeSession() (*RealtimeSession, error) {
 	session := &RealtimeSession{
 		BaseSession: BaseSession{
-			Type: "realtime",
+			Type:             "realtime",
+			outgoingMessages: make(chan types.ConversationItem),
+			functionCalls:    make(chan types.ConversationItem),
+			incomingEvents:   make(chan types.Event),
+			readyForInput:    make(chan struct{}, 1),
 		},
-		outgoingMessages: make(chan types.ConversationItem),
-		incomingEvents:   make(chan types.Event),
-		messageChannel:   make(chan []byte),
-		readyForInput:    make(chan struct{}, 1),
 	}
 
 	if createSessionRes, err := ConfigureModel(); err == nil {
@@ -55,10 +52,11 @@ func (s *RealtimeSession) Start() {
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	defer s.cancel()
 
-	s.wg.Add(4)
+	s.wg.Add(5)
 	go s.readMessages()
 	go s.sendMessages()
 	go s.handleIncomingEvents()
+	go s.handleFunctionCalls()
 	go s.handleUserInput()
 
 	s.readyForInput <- struct{}{}
@@ -84,6 +82,7 @@ func (s *RealtimeSession) close() {
 	s.wg.Wait()
 	close(s.outgoingMessages)
 	close(s.incomingEvents)
+	close(s.functionCalls)
 	close(s.readyForInput)
 }
 
@@ -151,8 +150,7 @@ func (s *RealtimeSession) sendMessages() {
 			return
 		case msg := <-s.outgoingMessages:
 			s.AddToConversation(msg)
-			conversationItem := s.NewClientMessage()
-			message, err := json.Marshal(conversationItem)
+			message, err := json.Marshal(s.NewClientMessage())
 			if err != nil {
 				log.Println("marshal error:", err)
 				continue
@@ -182,10 +180,7 @@ func (s *RealtimeSession) handleIncomingEvents() {
 				}
 			case types.ResponseOutputItemDoneEvent:
 				if event.Item.Type == types.FunctionCallItem {
-					if err := s.handleFunctionCalls(event.Item); err != nil {
-						log.Println("handleFunctionCalls error:", err)
-						return
-					}
+					s.functionCalls <- event.Item
 				}
 			case types.ErrorEvent:
 				fmt.Println("error message:", event.Error.Message)
@@ -194,24 +189,32 @@ func (s *RealtimeSession) handleIncomingEvents() {
 	}
 }
 
-func (s *RealtimeSession) handleFunctionCalls(item types.ConversationItem) error {
+func (s *RealtimeSession) handleFunctionCalls() {
 
-	if item.Name == ExitSessionFunctionName {
-		log.Println("Closing session...")
-		s.close()
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case item := <-s.functionCalls:
+			if item.Name == ExitSessionFunctionName {
+				log.Println("Closing session...")
+				s.close()
+			}
+
+			arguments, err := item.GetArguments()
+			if err != nil {
+				fmt.Println("error:", err)
+				return
+			}
+
+			result, err := global_tools.CallFunction(item.Name, arguments)
+			if err != nil {
+				fmt.Println("error:", err)
+				return
+			}
+
+			toolResItem := types.NewClientFunctionCallConversationItem(item, result)
+			s.outgoingMessages <- toolResItem
+		}
 	}
-
-	arguments, err := item.GetArguments()
-	if err != nil {
-		return err
-	}
-
-	result, err := global_tools.CallFunction(item.Name, arguments)
-	if err != nil {
-		return err
-	}
-
-	toolResItem := types.NewClientFunctionCallConversationItem(item, result)
-	s.outgoingMessages <- toolResItem
-	return nil
 }
