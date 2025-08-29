@@ -8,6 +8,14 @@ import (
 
 type ConversationItemType string
 
+type StatusType string
+
+const (
+	Completed  StatusType = "completed"
+	Incomplete StatusType = "incomplete"
+	InProgress StatusType = "in_progress"
+)
+
 const (
 	MessageItem            ConversationItemType = "message"
 	FunctionCallItem       ConversationItemType = "function_call"
@@ -24,7 +32,7 @@ type ConversationItem struct {
 	Object    string               `json:"object,omitempty"`    // Should be "realtime.item"
 	Output    string               `json:"output,omitempty"`    // Output for function_call_output
 	Role      string               `json:"role,omitempty"`      // "user", "assistant", "system"
-	Status    string               `json:"status,omitempty"`    // "completed", "incomplete", "in_progress"
+	Status    StatusType           `json:"status,omitempty"`    // "completed", "incomplete", "in_progress"
 	Type      ConversationItemType `json:"type,omitempty"`      // "message", "function_call", "function_call_output", "item_reference"
 }
 

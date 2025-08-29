@@ -20,8 +20,8 @@ import (
 
 type RealtimeSession struct {
 	BaseSession
-	outgoingMessages chan []byte
-	incomingMessages chan []byte
+	outgoingMessages chan types.ConversationItem
+	incomingEvents   chan events.Event
 	messageChannel   chan []byte
 	readyForInput    chan struct{}
 	conn             *websocket.Conn
@@ -32,8 +32,8 @@ func NewRealtimeSession() (*RealtimeSession, error) {
 		BaseSession: BaseSession{
 			Type: "realtime",
 		},
-		outgoingMessages: make(chan []byte),
-		incomingMessages: make(chan []byte),
+		outgoingMessages: make(chan types.ConversationItem),
+		incomingEvents:   make(chan events.Event),
 		messageChannel:   make(chan []byte),
 		readyForInput:    make(chan struct{}, 1),
 	}
@@ -97,7 +97,7 @@ func (s *RealtimeSession) close() {
 
 	s.wg.Wait()
 	close(s.outgoingMessages)
-	close(s.incomingMessages)
+	close(s.incomingEvents)
 	close(s.readyForInput)
 }
 
@@ -116,12 +116,7 @@ func (s *RealtimeSession) handleUserInput() {
 				return
 			}
 			text := reader.Text()
-			message, err := json.Marshal(builders.NewClientTextMessage(text))
-			if err != nil {
-				log.Println("marshal error:", err)
-				continue
-			}
-			s.outgoingMessages <- message
+			s.outgoingMessages <- builders.NewClientTextConversationItem(text)
 		}
 	}
 }
@@ -138,7 +133,16 @@ func (s *RealtimeSession) readMessages() {
 				log.Println("read error:", err)
 				return
 			}
-			s.incomingMessages <- msg
+			event := events.Event{}
+			if err := json.Unmarshal(msg, &event); err != nil {
+				log.Println("unmarshal error:", err)
+				return
+			}
+			if (event.Item.Type == types.FunctionCallItem || event.Item.Type == types.MessageItem) &&
+				event.Item.Status == types.Completed {
+				s.AddToConversation(event.Item)
+			}
+			s.incomingEvents <- event
 		}
 	}
 }
@@ -149,8 +153,16 @@ func (s *RealtimeSession) sendMessages() {
 		select {
 		case <-s.ctx.Done():
 			return
-		case message := <-s.outgoingMessages:
-			if err := s.conn.WriteMessage(websocket.TextMessage, message); err != nil {
+		case msg := <-s.outgoingMessages:
+			s.AddToConversation(msg)
+			conversationItem := builders.NewClientConversationEvent(s.GetConversation())
+			fmt.Println(conversationItem)
+			message, err := json.Marshal(conversationItem)
+			if err != nil {
+				log.Println("marshal error:", err)
+				continue
+			}
+			if err = s.conn.WriteMessage(websocket.TextMessage, message); err != nil {
 				log.Println("send error:", err)
 			}
 		}
@@ -163,17 +175,7 @@ func (s *RealtimeSession) handleIncomingEvents() {
 		select {
 		case <-s.ctx.Done():
 			return
-		case message := <-s.incomingMessages:
-			rawEvent := map[string]interface{}{}
-			if err := json.Unmarshal(message, &rawEvent); err != nil {
-				log.Println("unmarshal error:", err)
-				return
-			}
-			event := events.Event{}
-			if err := json.Unmarshal(message, &event); err != nil {
-				log.Println("unmarshal error:", err)
-				return
-			}
+		case event := <-s.incomingEvents:
 			switch event.Type {
 			case events.ResponseDone:
 				fmt.Println()
@@ -216,9 +218,8 @@ func (s *RealtimeSession) handleFunctionCalls(item types.ConversationItem) error
 		return err
 	}
 
-	toolResItem := builders.NewClientFunctionCallResultItem(item, result)
-	message, _ := json.Marshal(toolResItem)
-	s.outgoingMessages <- message
+	toolResItem := builders.NewClientFunctionCallConversationItem(item, result)
+	s.outgoingMessages <- toolResItem
 	return nil
 }
 

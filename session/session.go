@@ -28,6 +28,7 @@ type BaseSession struct {
 	cancel       context.CancelFunc
 	wg           sync.WaitGroup
 	mu           sync.Mutex
+	conversation []types.ConversationItem
 }
 
 func (bs *BaseSession) GetID() string {
@@ -52,6 +53,15 @@ func (bs *BaseSession) GetClientSecretValue() string {
 
 func (bs *BaseSession) GetCreationTime() types.ClientSecret {
 	return bs.clientSecret
+}
+
+func (s *RealtimeSession) AddToConversation(item types.ConversationItem) {
+	item.Object = ""
+	s.conversation = append(s.conversation, item)
+}
+
+func (s *RealtimeSession) GetConversation() []types.ConversationItem {
+	return s.conversation
 }
 
 func (bs *BaseSession) String() string {
