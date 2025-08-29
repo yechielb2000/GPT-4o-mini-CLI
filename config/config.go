@@ -5,6 +5,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -14,8 +15,8 @@ var (
 )
 
 const (
-	// ConfigFilePath is like this for tests TODO: read from path
-	ConfigFilePath = "./tests/config.yaml"
+	// ConfigFileName is like this for tests TODO: read from path
+	ConfigFileName = "config.yaml"
 
 	RealtimeSessionsPath = "/v1/realtime/sessions"
 	RealtimePath         = "/v1/realtime"
@@ -30,7 +31,8 @@ func GetConfig() *Config {
 
 func NewApiConfig() *Config {
 	config := &Config{}
-	data, err := os.ReadFile(ConfigFilePath)
+	filePath := getConfigFilePath()
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		panic(err)
 	}
@@ -45,10 +47,19 @@ func (c *Config) Save() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse config: %w", err)
 	}
-	if err := os.WriteFile(ConfigFilePath, data, 0644); err != nil {
+	if err := os.WriteFile(ConfigFileName, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 	return nil
+}
+
+func getConfigFilePath() string {
+	exePath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	dir := filepath.Dir(exePath)
+	return filepath.Join(dir, ConfigFileName)
 }
 
 // GetURL provides full url.URL object. path is provided manually.

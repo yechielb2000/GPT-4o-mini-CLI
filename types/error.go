@@ -1,5 +1,7 @@
 package types
 
+// Source: https://github.com/openai/openai-python/blob/main/src/openai/types/
+
 type Error struct {
 	Message string  `json:"message,omitempty"`  // Human-readable error message
 	Type    string  `json:"type,omitempty"`     // Type of error, e.g., "invalid_request_error"
