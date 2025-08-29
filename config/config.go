@@ -30,9 +30,16 @@ func GetConfig() *Config {
 func NewApiConfig() *Config {
 	config := &Config{}
 	filePath := getConfigFilePath()
+	if _, err := os.Stat(filePath); err != nil {
+		fmt.Println("Config file doesn't exist, creating default config file")
+		if err = createDefaultConfigFile(); err != nil {
+			fmt.Println(err)
+		}
+		return nil
+	}
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		panic(err)
+		fmt.Printf("failed to read config file: %v\n", err)
 	}
 	if err := yaml.Unmarshal(data, config); err != nil {
 		panic(fmt.Errorf("failed to parse YAML: %w", err))
