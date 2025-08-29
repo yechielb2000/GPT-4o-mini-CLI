@@ -99,6 +99,16 @@ func (s *RealtimeSession) close() {
 	close(s.readyForInput)
 }
 
+func (s *RealtimeSession) establishConnection() (*websocket.Conn, error) {
+	headers := http.Header{}
+	headers.Add("Authorization", "Bearer "+s.clientSecret.Value)
+	headers.Add("OpenAI-Beta", "realtime=v1")
+
+	url := config.GetURL(config.RealtimePath)
+	conn, _, err := websocket.DefaultDialer.Dial(url.String(), headers)
+	return conn, err
+}
+
 func (s *RealtimeSession) handleUserInput() {
 	defer s.wg.Done()
 	reader := bufio.NewScanner(os.Stdin)
@@ -216,14 +226,4 @@ func (s *RealtimeSession) handleFunctionCalls(item types.ConversationItem) error
 	toolResItem := types.NewClientFunctionCallConversationItem(item, result)
 	s.outgoingMessages <- toolResItem
 	return nil
-}
-
-func (s *RealtimeSession) establishConnection() (*websocket.Conn, error) {
-	headers := http.Header{}
-	headers.Add("Authorization", "Bearer "+s.clientSecret.Value)
-	headers.Add("OpenAI-Beta", "realtime=v1")
-
-	url := config.GetURL(config.RealtimePath)
-	conn, _, err := websocket.DefaultDialer.Dial(url.String(), headers)
-	return conn, err
 }
