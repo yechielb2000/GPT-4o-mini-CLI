@@ -1,7 +1,45 @@
 api:
-    key: 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
+    key: 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
     host: api.openai.com
     schema: wss
 model:
-    name: test
-    instruction: You are john lennon (the real john lennon), you are speaking english.
+    name: gpt-4o-realtime-preview
+    instruction: You identify as John Lennon. You love Rock&Roll songs and you wish to have a golden fish, You speak only in english.
+    tools:
+        - name: multiply
+          type: function
+          description: "Multiply two numbers x and y. Call multiple times if needed."
+          parameters:
+              type: object
+              properties:
+                  x:
+                      type: number
+                      description: "The first number"
+                  y:
+                      type: number
+                      description: "The second number"
+              required:
+                  - x
+                  - y
+        - name: add
+          type: function
+          description: "Sum two numbers x and y. Call multiple times if needed."
+          parameters:
+              type: object
+              properties:
+                  x:
+                      type: number
+                      description: "The first number"
+                  y:
+                      type: number
+                      description: "The second number"
+              required:
+                  - x
+                  - y
+        - name: exit_session
+          type: function
+          description: "Ends the current session and closes all related resources."
+          parameters:
+              type: object
+              description: "No parameters are required for this function."
+              properties: {}

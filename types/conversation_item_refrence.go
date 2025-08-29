@@ -1,16 +1,68 @@
 package types
 
+import (
+	"encoding/json"
+)
+
 // Source: https://github.com/openai/openai-python/blob/main/src/openai/types/beta/realtime/conversation_item_with_reference.py
 
-type ConversationItemWithReference struct {
-	ID        *string   `json:"id,omitempty"`        // Unique ID or reference to previous item
-	Arguments *string   `json:"arguments,omitempty"` // Arguments for function call
-	CallID    *string   `json:"call_id,omitempty"`   // Function call ID
-	Content   []Content `json:"content,omitempty"`   // Message contents (should maybe refer to a different content object)
-	Name      *string   `json:"name,omitempty"`      // Function name
-	Object    *string   `json:"object,omitempty"`    // Should be "realtime.item"
-	Output    *string   `json:"output,omitempty"`    // Output for function_call_output
-	Role      *string   `json:"role,omitempty"`      // "user", "assistant", "system"
-	Status    *string   `json:"status,omitempty"`    // "completed", "incomplete", "in_progress"
-	Type      *string   `json:"type,omitempty"`      // "message", "function_call", "function_call_output", "item_reference"
+type ConversationItemType string
+type Status string
+type Role Status
+
+const (
+	Completed  Status = "completed"
+	Incomplete Status = "incomplete"
+	InProgress Status = "in_progress"
+)
+
+const (
+	MessageItem            ConversationItemType = "message"
+	FunctionCallItem       ConversationItemType = "function_call"
+	FunctionCallOutputItem ConversationItemType = "function_call_output"
+	InputTextItem          ConversationItemType = "input_text"
+)
+
+const (
+	ClientName Role = "user"
+	ModelName  Role = "assistant"
+)
+
+type ConversationItem struct {
+	ID        string               `json:"id,omitempty"`        // Unique ID or reference to previous item
+	Arguments string               `json:"arguments,omitempty"` // Arguments for function call
+	CallID    string               `json:"call_id,omitempty"`   // Function call ID
+	Content   []Content            `json:"content,omitempty"`   // Content the item content
+	Name      string               `json:"name,omitempty"`      // Function name
+	Object    string               `json:"object,omitempty"`    // Should be "realtime.item"
+	Output    string               `json:"output,omitempty"`    // Output for function_call_output
+	Role      Role                 `json:"role,omitempty"`      // "user", "assistant", "system"
+	Status    Status               `json:"status,omitempty"`    // "completed", "incomplete", "in_progress"
+	Type      ConversationItemType `json:"type,omitempty"`      // "message", "function_call", "function_call_output", "item_reference"
+}
+
+func (c *ConversationItem) GetArguments() (map[string]interface{}, error) {
+	var m map[string]interface{}
+	if err := json.Unmarshal([]byte(c.Arguments), &m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func NewClientTextConversationItem(text string) ConversationItem {
+	return ConversationItem{
+		Type: MessageItem,
+		Role: ClientName,
+		Content: []Content{
+			{Text: text, Type: InputTextItem},
+		},
+	}
+}
+
+func NewClientFunctionCallConversationItem(item ConversationItem, result string) ConversationItem {
+	return ConversationItem{
+		Type:   FunctionCallOutputItem,
+		CallID: item.CallID,
+		Output: result,
+	}
 }

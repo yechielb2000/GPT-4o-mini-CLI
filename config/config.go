@@ -5,6 +5,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -14,9 +15,7 @@ var (
 )
 
 const (
-	// ConfigFilePath is like this for tests TODO: read from path
-	ConfigFilePath = "./tests/config.yaml"
-
+	FileName             = "config.yaml"
 	RealtimeSessionsPath = "/v1/realtime/sessions"
 	RealtimePath         = "/v1/realtime"
 )
@@ -30,9 +29,17 @@ func GetConfig() *Config {
 
 func NewApiConfig() *Config {
 	config := &Config{}
-	data, err := os.ReadFile(ConfigFilePath)
+	filePath := getConfigFilePath()
+	if _, err := os.Stat(filePath); err != nil {
+		fmt.Println("Config file doesn't exist, creating default config file")
+		if err = createDefaultConfigFile(); err != nil {
+			fmt.Println(err)
+		}
+		return nil
+	}
+	data, err := os.ReadFile(filePath)
 	if err != nil {
-		panic(err)
+		fmt.Printf("failed to read config file: %v\n", err)
 	}
 	if err := yaml.Unmarshal(data, config); err != nil {
 		panic(fmt.Errorf("failed to parse YAML: %w", err))
@@ -45,10 +52,19 @@ func (c *Config) Save() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse config: %w", err)
 	}
-	if err := os.WriteFile(ConfigFilePath, data, 0644); err != nil {
+	if err := os.WriteFile(FileName, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 	return nil
+}
+
+func getConfigFilePath() string {
+	exePath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	dir := filepath.Dir(exePath)
+	return filepath.Join(dir, FileName)
 }
 
 // GetURL provides full url.URL object. path is provided manually.

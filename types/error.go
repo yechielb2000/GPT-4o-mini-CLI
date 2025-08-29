@@ -1,7 +1,6 @@
 package types
 
-type Metadata = map[string]interface{}
-type ConversationItem = map[string]interface{}
+// Source: https://github.com/openai/openai-python/blob/main/src/openai/types/
 
 type Error struct {
 	Message string  `json:"message,omitempty"`  // Human-readable error message
@@ -9,9 +8,4 @@ type Error struct {
 	Code    *string `json:"code,omitempty"`     // Optional error code
 	EventID *string `json:"event_id,omitempty"` // Optional client event ID
 	Param   *string `json:"param,omitempty"`    // Optional related parameter
-}
-
-type ClientSecret struct {
-	Value     string `json:"value"`
-	ExpiresAt int64  `json:"expires_at"`
 }

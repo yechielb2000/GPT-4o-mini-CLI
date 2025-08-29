@@ -1,5 +1,7 @@
 package config
 
+import "gpt4omini/types"
+
 type Api struct {
 	Key    string `json:"key"`
 	Host   string `json:"host"`
@@ -7,8 +9,9 @@ type Api struct {
 }
 
 type Model struct {
-	Name        string `json:"name"`
-	Instruction string `json:"instruction"`
+	Name        string       `json:"name"`
+	Instruction string       `json:"instruction"`
+	Tools       []types.Tool `json:"tools"`
 }
 
 type Config struct {

@@ -1,55 +1,52 @@
-# GPT-4o-mini-CLI
+# Real-time GPT-4o-mini CLI
 
-Real-time GPT-4o-mini CLI with Function Calling
+A terminal-based client for interacting with OpenAI’s Realtime API.  
+This tool supports user input, function calls, and displays model responses in an interactive, live-updating terminal
+interface.
 
-## Installation Time :)
-
-compile and install the cli using these commands:
-
-```shell
-go build
-go install
-chmod +x gptoncli # you probably won't need it but in case you can't execute, run this.
-```
-
-Set a config file called `config.yaml`.
-
-[comment]: <> (make one for windows too..)
+## Installation & Configuration
 
 ```shell
-mkdir -p /etc/gptoncli && touch /etc/gptoncli/config.yaml
+git clone https://github.com/yechielb2000/GPT-4o-mini-CLI.git
+cd GPT-4o-mini-CLI
+go build; go install
+chmod +x gpt4omini
+./gpt4omini
 ```
 
-Then edit the file like this (change the values to your values)
+> _Note_: You should have a config.yaml under the same directory with your binary.
 
-```yaml
-api:
-  key: your-api-key
-  host: the host (api.openai.com)
-  schema: the schema (wss)
-model:
-  name: the model name (gpt-4.1)
-  instruction: the initial instructions (you are a rock band assistant...)
+You can configure the model and the api you are using via this `config.yaml`.  
+The structure of the config yaml is [here](config/config_structure.go).
+
+To configure via cli, you can run:
+
+```shell
+./gpt4omini config --help
 ```
 
-> _Note_: You can also change the values later using the cli
+You can set the `model` and the `instructions` for specific session but the default is taken from the
+config file.
 
-## Using the `gptoncli`
+## Basic Usage
 
-To see usage of the cli You can run `gptoncli --help`.  
-Let's see how it looks like very quickly.
+To start a session, You can run:
 
-```yaml
-gptoncli:
-  session: subcommand for handling session actions.
-             - new: create new session.
-             - list: list all sessions (sessions dies when we stop using the cli).
-             - "session id": will resume the session with the requested session.
-  config: subcommand for handling the config file
-            - print: print the current config file
-            - key: update the api key.
-            - host: update the target host.
-            - schema: update the schema type.
-            - model: update the model type.
-            - instruction: update the default initiative instructions for each session.
+```shell
+./gpt4omini session -t 'session-type'
 ```
+
+This will create a conversation with the model you chose and with the session type you wanted.
+
+To list all sessions types, you can run:
+
+```shell
+./gpt4omini session -s
+```
+
+For all flags and usage you can run:
+
+````shell
+./gpt4omini session --help
+````
+

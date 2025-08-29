@@ -2,43 +2,37 @@ package session
 
 import (
 	"bufio"
-	"bytes"
+	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
-	"gpt4omini/builders"
 	"gpt4omini/config"
-	"gpt4omini/events"
+	"gpt4omini/global_tools"
 	"gpt4omini/types"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
-	"strconv"
 	"time"
 )
 
 type RealtimeSession struct {
 	BaseSession
-	sendChannel   chan []byte
-	conn          *websocket.Conn
-	done          chan struct{}
-	readyForInput chan struct{}
+
+	conn *websocket.Conn
 }
 
 func NewRealtimeSession() (*RealtimeSession, error) {
 	session := &RealtimeSession{
 		BaseSession: BaseSession{
-			Type: "realtime",
+			Type:             "realtime",
+			outgoingMessages: make(chan types.ConversationItem),
+			functionCalls:    make(chan types.ConversationItem),
+			incomingEvents:   make(chan types.Event),
+			readyForInput:    make(chan struct{}, 1),
 		},
-		sendChannel:   make(chan []byte),
-		done:          make(chan struct{}),
-		readyForInput: make(chan struct{}, 1),
 	}
 
-	if createSessionRes, err := configureModel(); err == nil {
+	if createSessionRes, err := ConfigureModel(); err == nil {
 		session.ID = createSessionRes.Id
 		session.clientSecret = createSessionRes.ClientSecret
 		session.createdAt = time.Now()
@@ -54,31 +48,42 @@ func NewRealtimeSession() (*RealtimeSession, error) {
 	return session, nil
 }
 
-func configureModel() (*types.ConfigureModelResponse, error) {
-	bodyBytes, _ := json.Marshal(types.ConfigureModelRequest{
-		Modalities:   []string{"text"},
-		Model:        cfg.Model.Name,
-		Instructions: cfg.Model.Instruction,
-	})
-	u := "https://" + cfg.Api.Host + config.RealtimeSessionsPath
-	req, _ := http.NewRequest("POST", u, bytes.NewReader(bodyBytes))
-	req.Header.Set("Authorization", "Bearer "+cfg.Api.Key)
-	req.Header.Set("Content-Type", "application/json")
+func (s *RealtimeSession) Start() {
+	s.ctx, s.cancel = context.WithCancel(context.Background())
+	defer s.cancel()
 
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
+	s.wg.Add(5)
+	go s.readMessages()
+	go s.sendMessages()
+	go s.handleIncomingEvents()
+	go s.handleFunctionCalls()
+	go s.handleUserInput()
+
+	s.readyForInput <- struct{}{}
+
+	select {
+	case <-s.ctx.Done():
 	}
-	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-	sessionMetadata := &types.ConfigureModelResponse{}
-	if res.StatusCode == 200 {
-		err = json.Unmarshal(body, &sessionMetadata)
-	} else {
-		err = errors.New("unexpected status code " + strconv.Itoa(res.StatusCode) + ".\n" + string(body))
+}
+
+func (s *RealtimeSession) close() {
+	if s.cancel != nil {
+		s.cancel()
 	}
-	return sessionMetadata, err
+
+	if s.conn != nil {
+		_ = s.conn.WriteMessage(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
+		)
+		_ = s.conn.Close()
+	}
+
+	s.wg.Wait()
+	close(s.outgoingMessages)
+	close(s.incomingEvents)
+	close(s.functionCalls)
+	close(s.readyForInput)
 }
 
 func (s *RealtimeSession) establishConnection() (*websocket.Conn, error) {
@@ -91,115 +96,132 @@ func (s *RealtimeSession) establishConnection() (*websocket.Conn, error) {
 	return conn, err
 }
 
-func (s *RealtimeSession) Start() {
-	if s.HasClientSecretExpired() {
-		log.Println("The session is expired, start a new one.")
-		return
-	}
-
-	go s.receiveData()
-	go s.sendData()
-	go s.handleUserInput()
-
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
-
-	s.readyForInput <- struct{}{}
-
-	select {
-	case <-s.done:
-		log.Println("connection closed by server")
-	case <-interrupt:
-		log.Println("interrupt received, closing connection")
-		s.Close()
-	}
-}
-
-func (s *RealtimeSession) Close() {
-	_ = s.conn.WriteMessage(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
-	)
-	time.Sleep(100 * time.Millisecond)
-	s.conn.Close()
-	close(s.sendChannel)
-}
-
 func (s *RealtimeSession) handleUserInput() {
+	defer s.wg.Done()
 	reader := bufio.NewScanner(os.Stdin)
-	for range s.readyForInput {
-		fmt.Print("#> ")
-		if !reader.Scan() {
-			log.Println("stdin closed, exiting input loop")
-			s.Close()
-			return
-		}
-		text := reader.Text()
-
-		if text == "#>exit" {
-			log.Println("closing session...")
-			s.Close()
-			return
-		}
-
-		s.sendMessage(text)
-	}
-}
-
-func (s *RealtimeSession) receiveData() {
-	defer close(s.done)
-
 	for {
-		_, message, err := s.conn.ReadMessage()
-		if err != nil {
-			log.Println("read error:", err)
+		select {
+		case <-s.ctx.Done():
 			return
-		}
-		s.handleMessage(message)
-	}
-}
-
-func (s *RealtimeSession) sendData() {
-	for msg := range s.sendChannel {
-		if err := s.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
-			log.Println("write error:", err)
-			return
+		case <-s.readyForInput:
+			fmt.Printf("(%s)> ", s.GetID())
+			if !reader.Scan() {
+				log.Println("reader closed")
+				s.close()
+				return
+			}
+			text := reader.Text()
+			s.outgoingMessages <- types.NewClientTextConversationItem(text)
 		}
 	}
 }
 
-func (s *RealtimeSession) handleMessage(message []byte) {
-	sessionRes := map[string]any{}
-	if err := json.Unmarshal(message, &sessionRes); err != nil {
-		log.Println("unmarshal error:", err)
-	}
-	switch sessionRes["type"] {
-	case events.ResponseCreated:
-		fmt.Println(sessionRes)
-	case events.ResponseTextDelta:
-		fmt.Print(sessionRes["delta"])
-	case events.ResponseDone:
-		fmt.Println()
-		s.readyForInput <- struct{}{}
-	case events.Error:
-		fmt.Println(sessionRes["error"])
-	default:
-		fmt.Println(sessionRes["type"])
+func (s *RealtimeSession) readMessages() {
+	defer s.wg.Done()
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		default:
+			_, msg, err := s.conn.ReadMessage()
+			if err != nil {
+				log.Println("read error:", err)
+				return
+			}
+			event := types.Event{}
+			if err := json.Unmarshal(msg, &event); err != nil {
+				log.Println("unmarshal error:", err)
+				return
+			}
+			if (event.Item.Type == types.FunctionCallItem || event.Item.Type == types.MessageItem) &&
+				event.Item.Status == types.Completed {
+				s.AddToConversation(event.Item)
+			}
+			s.incomingEvents <- event
+		}
 	}
 }
 
-func (s *RealtimeSession) sendMessage(text string) {
-	rawMessage, err := json.Marshal(builders.NewClientTextMessage(text))
-
-	g := make(map[string]interface{})
-	_ = json.Unmarshal(rawMessage, &g)
-	fmt.Println(g)
-	if err != nil {
-		log.Println("marshal error:", err)
+func (s *RealtimeSession) sendMessages() {
+	defer s.wg.Done()
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case msg := <-s.outgoingMessages:
+			s.AddToConversation(msg)
+			message, err := json.Marshal(s.NewClientMessage())
+			if err != nil {
+				log.Println("marshal error:", err)
+				continue
+			}
+			if err = s.conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				log.Println("send error:", err)
+			}
+		}
 	}
-	s.sendChannel <- rawMessage
+}
+
+func (s *RealtimeSession) handleIncomingEvents() {
+	defer s.wg.Done()
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case event := <-s.incomingEvents:
+			switch event.Type {
+			case types.ResponseDoneEvent:
+				items := s.conversation
+				if len(items) > 0 {
+					lastItem := items[len(items)-1]
+					if lastItem.Type == types.FunctionCallItem || lastItem.Type == types.FunctionCallOutputItem {
+						continue
+					}
+				}
+				fmt.Println()
+				s.readyForInput <- struct{}{}
+			case types.ResponseTextDeltaEvent:
+				for _, r := range event.Delta {
+					fmt.Printf("%c", r)
+					time.Sleep(22 * time.Millisecond)
+				}
+			case types.ResponseOutputItemDoneEvent:
+				if event.Item.Type == types.FunctionCallItem {
+					s.functionCalls <- event.Item
+				}
+			case types.ErrorEvent:
+				fmt.Println("error message:", event.Error.Message)
+			}
+		}
+	}
 }
 
 func (s *RealtimeSession) handleFunctionCalls() {
-	// TODO: maybe we will have an Action / Tool singleton with these options
+	defer s.wg.Done()
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case item := <-s.functionCalls:
+			if item.Name == ExitSessionFunctionName {
+				log.Println("Closing session...")
+				s.close()
+			}
+
+			arguments, err := item.GetArguments()
+			if err != nil {
+				fmt.Println("error:", err)
+				return
+			}
+
+			result, err := global_tools.CallFunction(item.Name, arguments)
+			if err != nil {
+				fmt.Println("error:", err)
+				return
+			}
+
+			toolResItem := types.NewClientFunctionCallConversationItem(item, result)
+			s.outgoingMessages <- toolResItem
+		}
+	}
 }

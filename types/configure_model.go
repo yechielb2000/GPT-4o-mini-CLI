@@ -1,9 +1,15 @@
 package types
 
+type ClientSecret struct {
+	Value     string `json:"value"`
+	ExpiresAt int64  `json:"expires_at"`
+}
+
 type ConfigureModelRequest struct {
 	Modalities   []string `json:"modalities"`
 	Model        string   `json:"model"`
 	Instructions string   `json:"instructions"`
+	Tools        []Tool   `json:"tools"`
 }
 
 type ConfigureModelResponse struct {
