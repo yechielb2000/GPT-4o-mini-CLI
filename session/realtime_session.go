@@ -128,7 +128,7 @@ func (s *RealtimeSession) establishConnection() (*websocket.Conn, error) {
 	headers.Add("Authorization", "Bearer "+s.clientSecret.Value)
 	headers.Add("OpenAI-Beta", "realtime=v1")
 
-	url := config.GetURL(RealtimePath)
+	url := config.GetApiURL(RealtimePath)
 	conn, _, err := websocket.DefaultDialer.Dial(url.String(), headers)
 	return conn, err
 }

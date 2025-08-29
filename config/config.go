@@ -14,9 +14,7 @@ var (
 	once     sync.Once
 )
 
-const (
-	FileName = "config.yaml"
-)
+const FileName = "config.yaml"
 
 func GetConfig() *Config {
 	once.Do(func() {
@@ -65,8 +63,8 @@ func getConfigFilePath() string {
 	return filepath.Join(dir, FileName)
 }
 
-// GetURL provides full url.URL object. path is provided manually.
-func GetURL(path string) url.URL {
+// GetApiURL provides full url.URL object. path is provided manually.
+func GetApiURL(path string) url.URL {
 	config := GetConfig()
 	return url.URL{
 		Scheme:   config.Api.Schema,

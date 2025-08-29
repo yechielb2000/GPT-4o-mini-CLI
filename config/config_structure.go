@@ -11,7 +11,7 @@ type Api struct {
 type Model struct {
 	Name        string       `json:"name"`
 	Instruction string       `json:"instruction"`
-	Tools       []types.Tool `json:"tools"`
+	Tools       []types.Tool `json:"tools,omitempty"`
 }
 
 type Config struct {
