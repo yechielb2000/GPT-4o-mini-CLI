@@ -83,6 +83,7 @@ func (bs *BaseSession) String() string {
 	return string(out)
 }
 
+// ConfigureModel to init the model configuration before starting the conversation.
 func ConfigureModel() (*types.ConfigureModelResponse, error) {
 	bodyBytes, _ := json.Marshal(types.ConfigureModelRequest{
 		Modalities:   []string{"text"},
