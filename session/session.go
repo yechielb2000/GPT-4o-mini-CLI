@@ -56,7 +56,7 @@ func (bs *BaseSession) GetCreationTime() types.ClientSecret {
 }
 
 func (s *RealtimeSession) AddToConversation(item types.ConversationItem) {
-	item.Object = ""
+	item.Object = "" // The model do not expect to see it, so I removed it.
 	s.conversation = append(s.conversation, item)
 }
 
