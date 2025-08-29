@@ -116,12 +116,6 @@ func (s *RealtimeSession) handleUserInput() {
 				return
 			}
 			text := reader.Text()
-			if text == "#>exit" {
-				//TODO: make function call
-				log.Println("closing session...")
-				s.close()
-				return
-			}
 			message, err := json.Marshal(builders.NewClientTextMessage(text))
 			if err != nil {
 				log.Println("marshal error:", err)
@@ -170,6 +164,11 @@ func (s *RealtimeSession) handleIncomingEvents() {
 		case <-s.ctx.Done():
 			return
 		case message := <-s.incomingMessages:
+			rawEvent := map[string]interface{}{}
+			if err := json.Unmarshal(message, &rawEvent); err != nil {
+				log.Println("unmarshal error:", err)
+				return
+			}
 			event := events.Event{}
 			if err := json.Unmarshal(message, &event); err != nil {
 				log.Println("unmarshal error:", err)
@@ -178,16 +177,15 @@ func (s *RealtimeSession) handleIncomingEvents() {
 			switch event.Type {
 			case events.ResponseDone:
 				fmt.Println()
-				select {
-				case s.readyForInput <- struct{}{}:
-				default:
-				}
+				s.readyForInput <- struct{}{}
 			case events.ResponseTextDelta:
 				for _, r := range event.Delta {
 					fmt.Printf("%c", r)
 					time.Sleep(22 * time.Millisecond)
 				}
 			case events.ResponseOutputItemDone:
+				fmt.Println("item call id", event.Item.CallID)
+				fmt.Println("item id", event.Item.ID)
 				if event.Item.Type == types.FunctionCallItem {
 					if err := s.handleFunctionCalls(event.Item); err != nil {
 						log.Println("handleFunctionCalls error:", err)
@@ -195,27 +193,32 @@ func (s *RealtimeSession) handleIncomingEvents() {
 					}
 				}
 			case events.Error:
-				fmt.Println(event.Error.Message)
+				fmt.Println("error message:", event.Error.Message)
 			}
 		}
 	}
 }
 
 func (s *RealtimeSession) handleFunctionCalls(item types.ConversationItem) error {
-	if function, ok := global_tools.Factory[item.Name]; ok {
-		args, err := item.GetArguments()
-		if err != nil {
-			return err
-		}
-		result := function(args)
-		toolRes := builders.NewClientToolResult(item.Name, result)
-		item.Content = []types.Content{toolRes}
-		item.Type = types.FunctionCallOutputItem
-		item.Output = "output"
-		itemCreate := builders.NewClientItemCreateEvent(item)
-		message, _ := json.Marshal(itemCreate)
-		s.outgoingMessages <- message
+
+	if item.Name == ExitSessionFunctionName {
+		log.Println("Closing session...")
+		s.close()
 	}
+
+	arguments, err := item.GetArguments()
+	if err != nil {
+		return err
+	}
+
+	result, err := global_tools.CallFunction(item.Name, arguments)
+	if err != nil {
+		return err
+	}
+
+	toolResItem := builders.NewClientFunctionCallResultItem(item, result)
+	message, _ := json.Marshal(toolResItem)
+	s.outgoingMessages <- message
 	return nil
 }
 

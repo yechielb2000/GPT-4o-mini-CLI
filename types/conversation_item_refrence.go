@@ -12,7 +12,6 @@ const (
 	MessageItem            ConversationItemType = "message"
 	FunctionCallItem       ConversationItemType = "function_call"
 	FunctionCallOutputItem ConversationItemType = "function_call_output"
-	ReferenceItem          ConversationItemType = "item_reference"
 	InputTextItem          ConversationItemType = "input_text"
 )
 
@@ -20,7 +19,7 @@ type ConversationItem struct {
 	ID        string               `json:"id,omitempty"`        // Unique ID or reference to previous item
 	Arguments string               `json:"arguments,omitempty"` // Arguments for function call
 	CallID    string               `json:"call_id,omitempty"`   // Function call ID
-	Content   []Content            `json:"content,omitempty"`   // Message content
+	Content   []Content            `json:"content,omitempty"`   // Content the item content
 	Name      string               `json:"name,omitempty"`      // Function name
 	Object    string               `json:"object,omitempty"`    // Should be "realtime.item"
 	Output    string               `json:"output,omitempty"`    // Output for function_call_output

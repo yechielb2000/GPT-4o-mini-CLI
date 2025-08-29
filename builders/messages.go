@@ -1,6 +1,7 @@
 package builders
 
 import (
+	"fmt"
 	"gpt4omini/events"
 	"gpt4omini/types"
 )
@@ -11,13 +12,13 @@ func NewClientTextMessage(text string) *types.ClientMessage {
 	return &types.ClientMessage{
 		Type: events.ResponseCreate,
 		Response: types.Response{
-			Modalities: []string{"text"},
-			Input: []types.Message{
+			Modalities: []string{types.TextModality},
+			Input: []types.ConversationItem{
 				{
-					Type: "message",
+					Type: types.MessageItem,
 					Role: ClientName,
 					Content: []types.Content{
-						{Text: text, Type: "input_text"},
+						{Text: text, Type: types.InputTextItem},
 					},
 				},
 			},
@@ -25,17 +26,14 @@ func NewClientTextMessage(text string) *types.ClientMessage {
 	}
 }
 
-func NewClientToolResult(name string, result any) types.Content {
-	return types.Content{
-		Type:   "tool_result",
-		Name:   name,
-		Output: result,
-	}
-}
-
-func NewClientItemCreateEvent(item types.ConversationItem) events.ConversationItemCreateEvent {
+func NewClientFunctionCallResultItem(item types.ConversationItem, result string) events.ConversationItemCreateEvent {
+	fmt.Println("new item call id", item.CallID)
 	return events.ConversationItemCreateEvent{
 		Type: events.ConversationItemCreateEventType,
-		Item: item,
+		Item: types.ConversationItem{
+			Type:   types.FunctionCallOutputItem,
+			CallID: item.CallID,
+			Output: result,
+		},
 	}
 }

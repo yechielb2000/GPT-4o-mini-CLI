@@ -2,6 +2,13 @@ package types
 
 type Metadata = map[string]interface{}
 
+type Modality = string
+
+const (
+	TextModality  Modality = "text"
+	AudioModality Modality = "audio"
+)
+
 type Error struct {
 	Message string  `json:"message,omitempty"`  // Human-readable error message
 	Type    string  `json:"type,omitempty"`     // Type of error, e.g., "invalid_request_error"

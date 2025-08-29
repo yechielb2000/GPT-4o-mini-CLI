@@ -36,3 +36,10 @@ model:
               required:
                   - x
                   - y
+        - name: exit_session
+          type: function
+          description: "Ends the current session and closes all related resources."
+          parameters:
+              type: object
+              description: "No parameters are required for this function."
+              properties: {}

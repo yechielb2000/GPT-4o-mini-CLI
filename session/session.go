@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+const ExitSessionFunctionName = "exit_session"
+
 var cfg = config.GetConfig()
 
 // BaseSession contains fields shared across all sessions.
