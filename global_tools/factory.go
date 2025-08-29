@@ -4,14 +4,13 @@ import "fmt"
 
 var Factory = map[string]func(args map[string]interface{}) any{
 	"multiply": func(args map[string]interface{}) any {
-		x := args["x"].(float64)
-		y := args["y"].(float64)
-		return multiply(x, y)
+		return InputOfTwo(multiply, args)
 	},
 	"add": func(args map[string]interface{}) any {
-		x := args["x"].(float64)
-		y := args["y"].(float64)
-		return add(x, y)
+		return InputOfTwo(add, args)
+	},
+	"minus": func(args map[string]interface{}) any {
+		return InputOfTwo(minus, args)
 	},
 }
 
