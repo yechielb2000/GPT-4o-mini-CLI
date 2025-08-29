@@ -100,35 +100,6 @@ func (bs *BaseSession) String() string {
 	return string(out)
 }
 
-// ConfigureModel to init the model configuration before starting the conversation.
-func ConfigureModel() (*types.ConfigureModelResponse, error) {
-	bodyBytes, _ := json.Marshal(types.ConfigureModelRequest{
-		Modalities:   []string{"text"},
-		Model:        cfg.Model.Name,
-		Instructions: cfg.Model.Instruction,
-		Tools:        cfg.Model.Tools,
-	})
-	u := "https://" + cfg.Api.Host + config.RealtimeSessionsPath
-	req, _ := http.NewRequest("POST", u, bytes.NewReader(bodyBytes))
-	req.Header.Set("Authorization", "Bearer "+cfg.Api.Key)
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-	sessionMetadata := &types.ConfigureModelResponse{}
-	if res.StatusCode == 200 {
-		err = json.Unmarshal(body, &sessionMetadata)
-	} else {
-		err = errors.New("unexpected status code " + strconv.Itoa(res.StatusCode) + ".\n" + string(body))
-	}
-	return sessionMetadata, err
-}
-
 // Session is the common interface for all session types.
 type Session interface {
 	// Start is the starting point for the new session.

@@ -15,9 +15,7 @@ var (
 )
 
 const (
-	FileName             = "config.yaml"
-	RealtimeSessionsPath = "/v1/realtime/sessions"
-	RealtimePath         = "/v1/realtime"
+	FileName = "config.yaml"
 )
 
 func GetConfig() *Config {

@@ -2,17 +2,26 @@ package session
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"gpt4omini/config"
 	"gpt4omini/global_tools"
 	"gpt4omini/types"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
+)
+
+const (
+	RealtimeSessionsPath = "/v1/realtime/sessions"
+	RealtimePath         = "/v1/realtime"
 )
 
 type RealtimeSession struct {
@@ -86,12 +95,40 @@ func (s *RealtimeSession) close() {
 	close(s.readyForInput)
 }
 
+func ConfigureModel() (*types.ConfigureModelResponse, error) {
+	bodyBytes, _ := json.Marshal(types.ConfigureModelRequest{
+		Modalities:   []string{"text"},
+		Model:        cfg.Model.Name,
+		Instructions: cfg.Model.Instruction,
+		Tools:        cfg.Model.Tools,
+	})
+	u := "https://" + cfg.Api.Host + RealtimeSessionsPath
+	req, _ := http.NewRequest("POST", u, bytes.NewReader(bodyBytes))
+	req.Header.Set("Authorization", "Bearer "+cfg.Api.Key)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+	sessionMetadata := &types.ConfigureModelResponse{}
+	if res.StatusCode == 200 {
+		err = json.Unmarshal(body, &sessionMetadata)
+	} else {
+		err = errors.New("unexpected status code " + strconv.Itoa(res.StatusCode) + ".\n" + string(body))
+	}
+	return sessionMetadata, err
+}
+
 func (s *RealtimeSession) establishConnection() (*websocket.Conn, error) {
 	headers := http.Header{}
 	headers.Add("Authorization", "Bearer "+s.clientSecret.Value)
 	headers.Add("OpenAI-Beta", "realtime=v1")
 
-	url := config.GetURL(config.RealtimePath)
+	url := config.GetURL(RealtimePath)
 	conn, _, err := websocket.DefaultDialer.Dial(url.String(), headers)
 	return conn, err
 }
