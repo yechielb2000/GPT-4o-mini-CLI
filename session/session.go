@@ -51,10 +51,12 @@ func (bs *BaseSession) GetClientSecretValue() string {
 	return bs.clientSecret.Value
 }
 
+// GetCreationTime of all the session messages history
 func (bs *BaseSession) GetCreationTime() types.ClientSecret {
 	return bs.clientSecret
 }
 
+// AddToConversation any item that you want to model to remember
 func (s *RealtimeSession) AddToConversation(item types.ConversationItem) {
 	item.Object = "" // The model do not expect to see it, so I removed it.
 	s.conversation = append(s.conversation, item)
