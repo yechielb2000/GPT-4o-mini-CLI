@@ -53,11 +53,6 @@ func NewRealtimeSession() (*RealtimeSession, error) {
 }
 
 func (s *RealtimeSession) Start() {
-	if s.HasClientSecretExpired() {
-		log.Println("The session is expired, start a new one.")
-		return
-	}
-
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	defer s.cancel()
 
