@@ -50,3 +50,6 @@ For all flags and usage you can run:
 ./gpt4omini session --help
 ````
 
+## architecture & Design choices
+
+assets
