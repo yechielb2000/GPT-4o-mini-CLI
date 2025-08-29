@@ -51,7 +51,7 @@ func (bs *BaseSession) GetClientSecretValue() string {
 	return bs.clientSecret.Value
 }
 
-// GetCreationTime of all the session messages history
+// GetCreationTime get the creation time of the session
 func (bs *BaseSession) GetCreationTime() types.ClientSecret {
 	return bs.clientSecret
 }
@@ -62,10 +62,12 @@ func (s *RealtimeSession) AddToConversation(item types.ConversationItem) {
 	s.conversation = append(s.conversation, item)
 }
 
+// GetConversation of all the session messages history
 func (s *RealtimeSession) GetConversation() []types.ConversationItem {
 	return s.conversation
 }
 
+// String print nice the object
 func (bs *BaseSession) String() string {
 	out, _ := json.MarshalIndent(struct {
 		ID           string    `json:"id"`
