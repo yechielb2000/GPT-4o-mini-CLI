@@ -25,13 +25,13 @@ const (
 )
 
 type RealtimeSession struct {
-	BaseSession
+	*BaseSession
 	conn *websocket.Conn
 }
 
 func NewRealtimeSession() (*RealtimeSession, error) {
 	session := &RealtimeSession{
-		BaseSession: BaseSession{
+		BaseSession: &BaseSession{
 			Type:             "realtime",
 			outgoingMessages: make(chan types.ConversationItem),
 			functionCalls:    make(chan types.ConversationItem),
