@@ -1,15 +1,10 @@
 package session
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"gpt4omini/config"
 	"gpt4omini/types"
-	"io"
-	"net/http"
-	"strconv"
 	"sync"
 	"time"
 )
