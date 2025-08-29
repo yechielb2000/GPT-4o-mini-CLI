@@ -5,7 +5,7 @@ This tool supports user input, function calls, and displays model responses in a
 interface.
 
 ---------------------------
-![realtime_conversation.png](assets/realtime_conversation.png)
+![realtime_session.png](assets/realtime_session.png)
 ---------------------------
 
 ## Installation & Configuration
