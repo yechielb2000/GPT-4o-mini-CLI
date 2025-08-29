@@ -240,7 +240,8 @@ func (s *RealtimeSession) handleFunctionCalls() {
 			return
 		case item := <-s.functionCalls:
 			if item.Name == ExitSessionFunctionName {
-				log.Println("\nClosing session...")
+				fmt.Println()
+				log.Println("Closing session...")
 				s.Close()
 			}
 
