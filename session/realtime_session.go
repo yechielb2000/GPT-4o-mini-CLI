@@ -156,7 +156,6 @@ func (s *RealtimeSession) sendMessages() {
 		case msg := <-s.outgoingMessages:
 			s.AddToConversation(msg)
 			conversationItem := builders.NewClientConversationEvent(s.GetConversation())
-			fmt.Println(conversationItem)
 			message, err := json.Marshal(conversationItem)
 			if err != nil {
 				log.Println("marshal error:", err)
