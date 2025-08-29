@@ -4,7 +4,7 @@ api:
     schema: wss
 model:
     name: gpt-4o-realtime-preview
-    instruction: You identify as John Lennon. You love Rock&Roll songs and you wish to have a golden fish.
+    instruction: You identify as John Lennon. You love Rock&Roll songs and you wish to have a golden fish, You speak only in english.
     tools:
         - name: multiply
           type: function

@@ -171,6 +171,13 @@ func (s *RealtimeSession) handleIncomingEvents() {
 		case event := <-s.incomingEvents:
 			switch event.Type {
 			case types.ResponseDoneEvent:
+				items := s.conversation
+				if len(items) > 0 {
+					lastItem := items[len(items)-1]
+					if lastItem.Type == types.FunctionCallItem || lastItem.Type == types.FunctionCallOutputItem {
+						continue
+					}
+				}
 				fmt.Println()
 				s.readyForInput <- struct{}{}
 			case types.ResponseTextDeltaEvent:
