@@ -17,7 +17,7 @@ func NewClientTextMessage(text string) *types.ClientMessage {
 					Type: "message",
 					Role: ClientName,
 					Content: []types.Content{
-						types.TextContent{Text: text, Type: "input_text"},
+						{Text: text, Type: "input_text"},
 					},
 				},
 			},
@@ -25,8 +25,8 @@ func NewClientTextMessage(text string) *types.ClientMessage {
 	}
 }
 
-func NewClientToolResult(name string, result any) types.FunctionCallContent {
-	return types.FunctionCallContent{
+func NewClientToolResult(name string, result any) types.Content {
+	return types.Content{
 		Type:   "tool_result",
 		Name:   name,
 		Output: result,

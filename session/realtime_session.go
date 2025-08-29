@@ -188,7 +188,7 @@ func (s *RealtimeSession) handleIncomingEvents() {
 					time.Sleep(22 * time.Millisecond)
 				}
 			case events.ResponseOutputItemDone:
-				if event.Item.Type == "function_call" {
+				if event.Item.Type == types.FunctionCallItem {
 					if err := s.handleFunctionCalls(event.Item); err != nil {
 						log.Println("handleFunctionCalls error:", err)
 						return
