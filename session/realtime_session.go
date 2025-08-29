@@ -12,7 +12,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
 	"time"
 )
 
@@ -62,15 +61,9 @@ func (s *RealtimeSession) Start() {
 	go s.handleIncomingEvents()
 	go s.handleUserInput()
 
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
-
 	s.readyForInput <- struct{}{}
 
 	select {
-	case <-interrupt:
-		log.Println("Interrupt received, closing connection")
-		s.close()
 	case <-s.ctx.Done():
 	}
 }
@@ -158,7 +151,7 @@ func (s *RealtimeSession) sendMessages() {
 			return
 		case msg := <-s.outgoingMessages:
 			s.AddToConversation(msg)
-			conversationItem := types.NewClientMessage(s.GetConversation())
+			conversationItem := s.NewClientMessage()
 			message, err := json.Marshal(conversationItem)
 			if err != nil {
 				log.Println("marshal error:", err)

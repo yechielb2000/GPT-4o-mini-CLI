@@ -11,13 +11,3 @@ type ClientMessage struct {
 	Type     EventType `json:"type"`
 	Response Response  `json:"response"`
 }
-
-func NewClientMessage(items []ConversationItem) ClientMessage {
-	return ClientMessage{
-		Type: ResponseCreateEvent,
-		Response: Response{
-			Modalities: []Modality{TextModality},
-			Input:      items,
-		},
-	}
-}

@@ -67,6 +67,17 @@ func (s *RealtimeSession) GetConversation() []types.ConversationItem {
 	return s.conversation
 }
 
+// NewClientMessage that creates the client message based on the conversation history
+func (s *RealtimeSession) NewClientMessage() types.ClientMessage {
+	return types.ClientMessage{
+		Type: types.ResponseCreateEvent,
+		Response: types.Response{
+			Modalities: []types.Modality{types.TextModality},
+			Input:      s.GetConversation(),
+		},
+	}
+}
+
 // String print nice the object
 func (bs *BaseSession) String() string {
 	out, _ := json.MarshalIndent(struct {
