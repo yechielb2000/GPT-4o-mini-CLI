@@ -4,6 +4,10 @@ A terminal-based client for interacting with OpenAI’s Realtime API.
 This tool supports user input, function calls, and displays model responses in an interactive, live-updating terminal
 interface.
 
+---------------------------
+![realtime_conversation.png](assets/realtime_conversation.png)
+---------------------------
+
 ## Installation & Configuration
 
 ```shell
@@ -52,4 +56,18 @@ For all flags and usage you can run:
 
 ## architecture & Design choices
 
-assets
+- assets - holds assets like images and videos
+- cmd - the command line handlers (using cobra)
+- config - the config file (instance, structure and handlers)
+- random_tools - just an idea for showing functions that are being used by function calling the with the model.
+- session - the Session interface and all session types.
+- tests - nothing else here, but in the future we could use this for testing.
+- types - holds all responses and events types, The DTOs of our sdk. 
+
+The Design is pretty simple. We got the Session interface that shares anything that every session needs to have.  
+For example, we use it in `realtime session`.
+
+The Session interface is very functional and does a lot for us.
+You only need to make a bridge between the user interface and the api. Depends on the session you need and the modality.
+
+I was thinking to make the incomingMessages

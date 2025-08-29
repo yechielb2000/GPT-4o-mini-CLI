@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"gpt4omini/config"
-	"gpt4omini/global_tools"
+	"gpt4omini/random_tools"
 	"gpt4omini/types"
 	"io"
 	"log"
@@ -26,7 +26,6 @@ const (
 
 type RealtimeSession struct {
 	BaseSession
-
 	conn *websocket.Conn
 }
 
@@ -75,7 +74,7 @@ func (s *RealtimeSession) Start() {
 	}
 }
 
-func (s *RealtimeSession) close() {
+func (s *RealtimeSession) Close() {
 	if s.cancel != nil {
 		s.cancel()
 	}
@@ -144,7 +143,7 @@ func (s *RealtimeSession) handleUserInput() {
 			fmt.Printf("(%s)> ", s.GetID())
 			if !reader.Scan() {
 				log.Println("reader closed")
-				s.close()
+				s.Close()
 				return
 			}
 			text := reader.Text()
@@ -242,7 +241,7 @@ func (s *RealtimeSession) handleFunctionCalls() {
 		case item := <-s.functionCalls:
 			if item.Name == ExitSessionFunctionName {
 				log.Println("\nClosing session...")
-				s.close()
+				s.Close()
 			}
 
 			arguments, err := item.GetArguments()
@@ -251,7 +250,7 @@ func (s *RealtimeSession) handleFunctionCalls() {
 				return
 			}
 
-			result, err := global_tools.CallFunction(item.Name, arguments)
+			result, err := random_tools.CallFunction(item.Name, arguments)
 			if err != nil {
 				fmt.Println("error:", err)
 				return

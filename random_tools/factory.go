@@ -1,4 +1,4 @@
-package global_tools
+package random_tools
 
 import "fmt"
 
