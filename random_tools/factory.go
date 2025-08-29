@@ -1,4 +1,4 @@
-package global_tools
+package random_tools
 
 import "fmt"
 
@@ -20,4 +20,11 @@ func CallFunction(name string, args map[string]interface{}) (string, error) {
 		return result, nil
 	}
 	return "", fmt.Errorf("no such function: %s", name)
+}
+
+// InputOfTwo used to reduce code for the factory
+func InputOfTwo(fn func(float64, float64) float64, args map[string]interface{}) float64 {
+	x := args["x"].(float64)
+	y := args["y"].(float64)
+	return fn(x, y)
 }

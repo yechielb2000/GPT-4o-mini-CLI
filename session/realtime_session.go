@@ -2,28 +2,36 @@ package session
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"gpt4omini/config"
-	"gpt4omini/global_tools"
+	"gpt4omini/random_tools"
 	"gpt4omini/types"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
-type RealtimeSession struct {
-	BaseSession
+const (
+	RealtimeSessionsPath = "/v1/realtime/sessions"
+	RealtimePath         = "/v1/realtime"
+)
 
+type RealtimeSession struct {
+	*BaseSession
 	conn *websocket.Conn
 }
 
 func NewRealtimeSession() (*RealtimeSession, error) {
 	session := &RealtimeSession{
-		BaseSession: BaseSession{
+		BaseSession: &BaseSession{
 			Type:             "realtime",
 			outgoingMessages: make(chan types.ConversationItem),
 			functionCalls:    make(chan types.ConversationItem),
@@ -66,7 +74,7 @@ func (s *RealtimeSession) Start() {
 	}
 }
 
-func (s *RealtimeSession) close() {
+func (s *RealtimeSession) Close() {
 	if s.cancel != nil {
 		s.cancel()
 	}
@@ -86,12 +94,40 @@ func (s *RealtimeSession) close() {
 	close(s.readyForInput)
 }
 
+func ConfigureModel() (*types.ConfigureModelResponse, error) {
+	bodyBytes, _ := json.Marshal(types.ConfigureModelRequest{
+		Modalities:   []string{"text"},
+		Model:        cfg.Model.Name,
+		Instructions: cfg.Model.Instruction,
+		Tools:        cfg.Model.Tools,
+	})
+	u := "https://" + cfg.Api.Host + RealtimeSessionsPath
+	req, _ := http.NewRequest("POST", u, bytes.NewReader(bodyBytes))
+	req.Header.Set("Authorization", "Bearer "+cfg.Api.Key)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+	sessionMetadata := &types.ConfigureModelResponse{}
+	if res.StatusCode == 200 {
+		err = json.Unmarshal(body, &sessionMetadata)
+	} else {
+		err = errors.New("unexpected status code " + strconv.Itoa(res.StatusCode) + ".\n" + string(body))
+	}
+	return sessionMetadata, err
+}
+
 func (s *RealtimeSession) establishConnection() (*websocket.Conn, error) {
 	headers := http.Header{}
 	headers.Add("Authorization", "Bearer "+s.clientSecret.Value)
 	headers.Add("OpenAI-Beta", "realtime=v1")
 
-	url := config.GetURL(config.RealtimePath)
+	url := config.GetApiURL(RealtimePath)
 	conn, _, err := websocket.DefaultDialer.Dial(url.String(), headers)
 	return conn, err
 }
@@ -107,7 +143,7 @@ func (s *RealtimeSession) handleUserInput() {
 			fmt.Printf("(%s)> ", s.GetID())
 			if !reader.Scan() {
 				log.Println("reader closed")
-				s.close()
+				s.Close()
 				return
 			}
 			text := reader.Text()
@@ -204,8 +240,9 @@ func (s *RealtimeSession) handleFunctionCalls() {
 			return
 		case item := <-s.functionCalls:
 			if item.Name == ExitSessionFunctionName {
+				fmt.Println()
 				log.Println("Closing session...")
-				s.close()
+				s.Close()
 			}
 
 			arguments, err := item.GetArguments()
@@ -214,7 +251,7 @@ func (s *RealtimeSession) handleFunctionCalls() {
 				return
 			}
 
-			result, err := global_tools.CallFunction(item.Name, arguments)
+			result, err := random_tools.CallFunction(item.Name, arguments)
 			if err != nil {
 				fmt.Println("error:", err)
 				return
