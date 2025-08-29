@@ -190,7 +190,7 @@ func (s *RealtimeSession) handleIncomingEvents() {
 }
 
 func (s *RealtimeSession) handleFunctionCalls() {
-
+	defer s.wg.Done()
 	for {
 		select {
 		case <-s.ctx.Done():
