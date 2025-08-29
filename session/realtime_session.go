@@ -6,9 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
-	"gpt4omini/builders"
 	"gpt4omini/config"
-	"gpt4omini/events"
 	"gpt4omini/global_tools"
 	"gpt4omini/types"
 	"log"
@@ -21,7 +19,7 @@ import (
 type RealtimeSession struct {
 	BaseSession
 	outgoingMessages chan types.ConversationItem
-	incomingEvents   chan events.Event
+	incomingEvents   chan types.Event
 	messageChannel   chan []byte
 	readyForInput    chan struct{}
 	conn             *websocket.Conn
@@ -33,7 +31,7 @@ func NewRealtimeSession() (*RealtimeSession, error) {
 			Type: "realtime",
 		},
 		outgoingMessages: make(chan types.ConversationItem),
-		incomingEvents:   make(chan events.Event),
+		incomingEvents:   make(chan types.Event),
 		messageChannel:   make(chan []byte),
 		readyForInput:    make(chan struct{}, 1),
 	}
@@ -116,7 +114,7 @@ func (s *RealtimeSession) handleUserInput() {
 				return
 			}
 			text := reader.Text()
-			s.outgoingMessages <- builders.NewClientTextConversationItem(text)
+			s.outgoingMessages <- types.NewClientTextConversationItem(text)
 		}
 	}
 }
@@ -133,7 +131,7 @@ func (s *RealtimeSession) readMessages() {
 				log.Println("read error:", err)
 				return
 			}
-			event := events.Event{}
+			event := types.Event{}
 			if err := json.Unmarshal(msg, &event); err != nil {
 				log.Println("unmarshal error:", err)
 				return
@@ -155,7 +153,7 @@ func (s *RealtimeSession) sendMessages() {
 			return
 		case msg := <-s.outgoingMessages:
 			s.AddToConversation(msg)
-			conversationItem := builders.NewClientConversationEvent(s.GetConversation())
+			conversationItem := types.NewClientMessage(s.GetConversation())
 			message, err := json.Marshal(conversationItem)
 			if err != nil {
 				log.Println("marshal error:", err)
@@ -176,24 +174,22 @@ func (s *RealtimeSession) handleIncomingEvents() {
 			return
 		case event := <-s.incomingEvents:
 			switch event.Type {
-			case events.ResponseDone:
+			case types.ResponseDoneEvent:
 				fmt.Println()
 				s.readyForInput <- struct{}{}
-			case events.ResponseTextDelta:
+			case types.ResponseTextDeltaEvent:
 				for _, r := range event.Delta {
 					fmt.Printf("%c", r)
 					time.Sleep(22 * time.Millisecond)
 				}
-			case events.ResponseOutputItemDone:
-				fmt.Println("item call id", event.Item.CallID)
-				fmt.Println("item id", event.Item.ID)
+			case types.ResponseOutputItemDoneEvent:
 				if event.Item.Type == types.FunctionCallItem {
 					if err := s.handleFunctionCalls(event.Item); err != nil {
 						log.Println("handleFunctionCalls error:", err)
 						return
 					}
 				}
-			case events.Error:
+			case types.ErrorEvent:
 				fmt.Println("error message:", event.Error.Message)
 			}
 		}
@@ -217,7 +213,7 @@ func (s *RealtimeSession) handleFunctionCalls(item types.ConversationItem) error
 		return err
 	}
 
-	toolResItem := builders.NewClientFunctionCallConversationItem(item, result)
+	toolResItem := types.NewClientFunctionCallConversationItem(item, result)
 	s.outgoingMessages <- toolResItem
 	return nil
 }

@@ -7,13 +7,13 @@ import (
 // Source: https://github.com/openai/openai-python/blob/main/src/openai/types/beta/realtime/conversation_item_with_reference.py
 
 type ConversationItemType string
-
-type StatusType string
+type Status string
+type Role Status
 
 const (
-	Completed  StatusType = "completed"
-	Incomplete StatusType = "incomplete"
-	InProgress StatusType = "in_progress"
+	Completed  Status = "completed"
+	Incomplete Status = "incomplete"
+	InProgress Status = "in_progress"
 )
 
 const (
@@ -21,6 +21,11 @@ const (
 	FunctionCallItem       ConversationItemType = "function_call"
 	FunctionCallOutputItem ConversationItemType = "function_call_output"
 	InputTextItem          ConversationItemType = "input_text"
+)
+
+const (
+	ClientName Role = "user"
+	ModelName  Role = "assistant"
 )
 
 type ConversationItem struct {
@@ -31,8 +36,8 @@ type ConversationItem struct {
 	Name      string               `json:"name,omitempty"`      // Function name
 	Object    string               `json:"object,omitempty"`    // Should be "realtime.item"
 	Output    string               `json:"output,omitempty"`    // Output for function_call_output
-	Role      string               `json:"role,omitempty"`      // "user", "assistant", "system"
-	Status    StatusType           `json:"status,omitempty"`    // "completed", "incomplete", "in_progress"
+	Role      Role                 `json:"role,omitempty"`      // "user", "assistant", "system"
+	Status    Status               `json:"status,omitempty"`    // "completed", "incomplete", "in_progress"
 	Type      ConversationItemType `json:"type,omitempty"`      // "message", "function_call", "function_call_output", "item_reference"
 }
 
@@ -42,4 +47,22 @@ func (c *ConversationItem) GetArguments() (map[string]interface{}, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+func NewClientTextConversationItem(text string) ConversationItem {
+	return ConversationItem{
+		Type: MessageItem,
+		Role: ClientName,
+		Content: []Content{
+			{Text: text, Type: InputTextItem},
+		},
+	}
+}
+
+func NewClientFunctionCallConversationItem(item ConversationItem, result string) ConversationItem {
+	return ConversationItem{
+		Type:   FunctionCallOutputItem,
+		CallID: item.CallID,
+		Output: result,
+	}
 }

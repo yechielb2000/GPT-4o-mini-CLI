@@ -8,6 +8,16 @@ Source: https://github.com/openai/openai-python/blob/main/src/openai/types/conve
 In the source there is the fields of Message which is exactly how ConversationItem looks like if we omit the rest.
 */
 type ClientMessage struct {
-	Type     string   `json:"type"`
-	Response Response `json:"response"`
+	Type     EventType `json:"type"`
+	Response Response  `json:"response"`
+}
+
+func NewClientMessage(items []ConversationItem) ClientMessage {
+	return ClientMessage{
+		Type: ResponseCreateEvent,
+		Response: Response{
+			Modalities: []Modality{TextModality},
+			Input:      items,
+		},
+	}
 }

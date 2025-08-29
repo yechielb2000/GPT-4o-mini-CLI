@@ -5,8 +5,7 @@ import (
 	"fmt"
 )
 
-// Using this factory to create all session types available.
-
+// Factory creates a session from all session types available.
 var Factory = map[string]func() (Session, error){
 	"realtime": func() (Session, error) { return NewRealtimeSession() },
 }
