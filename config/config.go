@@ -15,9 +15,7 @@ var (
 )
 
 const (
-	// ConfigFileName is like this for tests TODO: read from path
-	ConfigFileName = "config.yaml"
-
+	FileName             = "config.yaml"
 	RealtimeSessionsPath = "/v1/realtime/sessions"
 	RealtimePath         = "/v1/realtime"
 )
@@ -47,7 +45,7 @@ func (c *Config) Save() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse config: %w", err)
 	}
-	if err := os.WriteFile(ConfigFileName, data, 0644); err != nil {
+	if err := os.WriteFile(FileName, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 	return nil
@@ -59,7 +57,7 @@ func getConfigFilePath() string {
 		panic(err)
 	}
 	dir := filepath.Dir(exePath)
-	return filepath.Join(dir, ConfigFileName)
+	return filepath.Join(dir, FileName)
 }
 
 // GetURL provides full url.URL object. path is provided manually.
