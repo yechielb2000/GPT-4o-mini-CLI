@@ -64,7 +64,7 @@ func (s *RealtimeSession) Start() {
 	go s.readMessages()
 	go s.sendMessages()
 	go s.handleIncomingEvents()
-	go s.handleFunctionCalls()
+	go s.handleIncomingFunctionCalls()
 	go s.handleUserInput()
 
 	s.readyForInput <- struct{}{}
@@ -232,7 +232,7 @@ func (s *RealtimeSession) handleIncomingEvents() {
 	}
 }
 
-func (s *RealtimeSession) handleFunctionCalls() {
+func (s *RealtimeSession) handleIncomingFunctionCalls() {
 	defer s.wg.Done()
 	for {
 		select {
