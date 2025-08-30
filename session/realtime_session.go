@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"gpt4omini/config"
-	"gpt4omini/random_tools"
+	"gpt4omini/function_tools"
 	"gpt4omini/types"
 	"io"
 	"log"
@@ -64,7 +64,7 @@ func (s *RealtimeSession) Start() {
 	go s.readMessages()
 	go s.sendMessages()
 	go s.handleIncomingEvents()
-	go s.handleFunctionCalls()
+	go s.handleIncomingFunctionCalls()
 	go s.handleUserInput()
 
 	s.readyForInput <- struct{}{}
@@ -207,6 +207,8 @@ func (s *RealtimeSession) handleIncomingEvents() {
 		case event := <-s.incomingEvents:
 			switch event.Type {
 			case types.ResponseDoneEvent:
+				// checking if the last item in the conversation is a function call item,
+				// if it is, then we skip the print.
 				items := s.conversation
 				if len(items) > 0 {
 					lastItem := items[len(items)-1]
@@ -217,11 +219,14 @@ func (s *RealtimeSession) handleIncomingEvents() {
 				fmt.Println()
 				s.readyForInput <- struct{}{}
 			case types.ResponseTextDeltaEvent:
+				// print delta from the response text delta event
 				for _, r := range event.Delta {
 					fmt.Printf("%c", r)
 					time.Sleep(22 * time.Millisecond)
 				}
 			case types.ResponseOutputItemDoneEvent:
+				// on the response output item done event for type `function_call` we
+				// throw it into the `functionCalls` channel
 				if event.Item.Type == types.FunctionCallItem {
 					s.functionCalls <- event.Item
 				}
@@ -232,7 +237,7 @@ func (s *RealtimeSession) handleIncomingEvents() {
 	}
 }
 
-func (s *RealtimeSession) handleFunctionCalls() {
+func (s *RealtimeSession) handleIncomingFunctionCalls() {
 	defer s.wg.Done()
 	for {
 		select {
@@ -251,7 +256,7 @@ func (s *RealtimeSession) handleFunctionCalls() {
 				return
 			}
 
-			result, err := random_tools.CallFunction(item.Name, arguments)
+			result, err := function_tools.CallFunction(item.Name, arguments)
 			if err != nil {
 				fmt.Println("error:", err)
 				return

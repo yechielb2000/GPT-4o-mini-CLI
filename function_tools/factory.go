@@ -1,4 +1,4 @@
-package random_tools
+package function_tools
 
 import "fmt"
 
