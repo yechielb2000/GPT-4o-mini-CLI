@@ -59,7 +59,7 @@ For all flags and usage you can run:
 - assets - holds assets like images and videos
 - cmd - the command line handlers (using cobra)
 - config - the config file (instance, structure and handlers)
-- random_tools - just an idea for showing functions that are being used by function calling the with the model.
+- function_tools - just an idea for showing functions that are being used by function calling the with the model.
 - session - the Session interface and all session types.
 - tests - nothing else here, but in the future we could use this for testing.
 - types - holds all responses and events types, The DTOs of our sdk.

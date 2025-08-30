@@ -1,4 +1,4 @@
-package random_tools
+package function_tools
 
 func multiply(x float64, y float64) float64 {
 	return x * y

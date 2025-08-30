@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"gpt4omini/config"
-	"gpt4omini/random_tools"
+	"gpt4omini/function_tools"
 	"gpt4omini/types"
 	"io"
 	"log"
@@ -251,7 +251,7 @@ func (s *RealtimeSession) handleFunctionCalls() {
 				return
 			}
 
-			result, err := random_tools.CallFunction(item.Name, arguments)
+			result, err := function_tools.CallFunction(item.Name, arguments)
 			if err != nil {
 				fmt.Println("error:", err)
 				return
