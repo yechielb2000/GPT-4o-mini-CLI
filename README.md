@@ -70,6 +70,13 @@ For example, we use it in `realtime session`.
 The BaseSession is very functional and handles a lot for us.
 You only need to make a bridge between the user interface and the api. Depends on the session you need and the modality.
 
+Each function call is being handled by the session. Each session can handle it differently and have its own
+implementation,
+although I do think that handling the generic function calls could be in `BaseSession` but since I don't really think
+that the sdk should have `function_tools` as a public package and each session type has its own function handling, you
+can make the developer implement its own handler.  
+Anyway, for the exercise, each function call goes to a factory that executes the right function with its arguments.
+
 The DTOs making was really painful with a lot of try excepts xd. The thing is that their docs are not really helping you
 and only shows how the response looks.  
 I had to read `openai-python`'s code (it doesn't exist on the go sdk unless I missed it).
@@ -80,7 +87,8 @@ anyway, it was fun :)
 
 ----
 BTW at first I made the events separated from the types because I thought it should be like this and I still think it's
-better, but I managed to make one Event struct to contain all the expected data objects from the api (I hope so at least).
+better, but I managed to make one Event struct to contain all the expected data objects from the api (I hope so at
+least).
 So if that's true and there is no more to expand, I would leave it in types.
 If there is more than that then I think it should sit under `events` package...
 
