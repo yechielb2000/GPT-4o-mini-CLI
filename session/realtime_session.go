@@ -207,6 +207,8 @@ func (s *RealtimeSession) handleIncomingEvents() {
 		case event := <-s.incomingEvents:
 			switch event.Type {
 			case types.ResponseDoneEvent:
+				// checking if the last item in the conversation is a function call item,
+				// if it is, then we skip the print.
 				items := s.conversation
 				if len(items) > 0 {
 					lastItem := items[len(items)-1]
@@ -217,11 +219,14 @@ func (s *RealtimeSession) handleIncomingEvents() {
 				fmt.Println()
 				s.readyForInput <- struct{}{}
 			case types.ResponseTextDeltaEvent:
+				// print delta from the response text delta event
 				for _, r := range event.Delta {
 					fmt.Printf("%c", r)
 					time.Sleep(22 * time.Millisecond)
 				}
 			case types.ResponseOutputItemDoneEvent:
+				// on the response output item done event for type `function_call` we
+				// throw it into the `functionCalls` channel
 				if event.Item.Type == types.FunctionCallItem {
 					s.functionCalls <- event.Item
 				}
