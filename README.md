@@ -13,8 +13,7 @@ interface.
 ```shell
 git clone https://github.com/yechielb2000/GPT-4o-mini-CLI.git
 cd GPT-4o-mini-CLI
-go build; go install
-chmod +x gpt4omini
+go build -o gpt4omin
 ./gpt4omini
 ```
 
